@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node -e \"const {createBrowserClient} = require\\('@supabase/ssr'\\); console.log\\(typeof createBrowserClient\\)\")",
+      "Bash(node -e \"console.log\\('react:', require\\('react/package.json'\\).version, '| react-dom:', require\\('react-dom/package.json'\\).version\\)\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path app -Recurse | Select-Object FullName\")",
+      "Bash(npx next:*)",
+      "Bash(mkdir -p \"app/\\(auth\\)/auth/login\" \"app/\\(auth\\)/auth/register\" \"app/\\(auth\\)/auth/verify\" \"app/\\(auth\\)/auth/forgot-password\")",
+      "Bash(mv \"app/\\(auth\\)/login/page.tsx\" \"app/\\(auth\\)/auth/login/page.tsx\")",
+      "Bash(mv \"app/\\(auth\\)/register/page.tsx\" \"app/\\(auth\\)/auth/register/page.tsx\")",
+      "Bash(mv \"app/\\(auth\\)/verify/page.tsx\" \"app/\\(auth\\)/auth/verify/page.tsx\")",
+      "Bash(mv \"app/\\(auth\\)/forgot-password/page.tsx\" \"app/\\(auth\\)/auth/forgot-password/page.tsx\")",
+      "Bash(powershell -Command \"Get-ChildItem -Path 'app/\\(auth\\)' -Recurse | Select-Object FullName\")",
+      "Bash(npm uninstall:*)",
+      "Bash(node -e \"const pkg = require\\('@supabase/ssr/package.json'\\); console.log\\('version:', pkg.version\\); const m = require\\('@supabase/ssr'\\); console.log\\('exports:', Object.keys\\(m\\)\\)\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/auth/login)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001/auth/login)",
+      "Bash(curl -s http://localhost:3001/auth/login)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(node:*)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3000/auth/login)",
+      "Bash(curl -s http://localhost:3000/auth/login)",
+      "Bash(python3 -c \"import sys,json,re; body=sys.stdin.read\\(\\); m=re.search\\(r'\\\\\"err\\\\\":\\\\{.*?\\\\\"message\\\\\":\\\\\"\\([^\\\\\"]+\\)\\\\\"', body\\); print\\(m.group\\(1\\) if m else 'No error found in body'\\)\")",
+      "Bash(curl -sv http://localhost:3000/auth/login)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:3002/auth/login)",
+      "Bash(curl -s http://localhost:3002/auth/login)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:3000/auth/login)",
+      "Bash(curl:*)",
+      "Bash(powershell -Command \"Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(npm run:*)",
+      "Bash(rm:*)",
+      "Bash(npm show:*)",
+      "Bash(npm audit:*)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --turbopack --import-alias \"@/*\")",
+      "Bash(taskkill /F /PID 11240)",
+      "Bash(cmd /c \"taskkill /PID 11240 /F\")",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri 'http://localhost:3001/login' -UseBasicParsing\\).StatusCode\")",
+      "Bash(powershell:*)",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

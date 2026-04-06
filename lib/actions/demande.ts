@@ -1,0 +1,111 @@
+'use server'
+
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export interface ColisPayload {
+  destination_ville: string
+  destinataire_nom: string
+  destinataire_telephone: string
+  destinataire_adresse: string
+  poids_declare: number
+  longueur: number
+  largeur: number
+  hauteur: number
+  tarif_unitaire: number
+  crbt_montant: number | null
+}
+
+export interface DemandePayload {
+  adresse_collecte_texte: string
+  adresse_collecte_lat: number | null
+  adresse_collecte_lng: number | null
+  type_variante: 'inter_ville' | 'intra_ville'
+  notes: string
+  colis: ColisPayload[]
+}
+
+export interface DemandeCreee {
+  demandeId: string
+  reference: string
+  colisCreés: { reference: string; destinataire_nom: string; destination_ville: string }[]
+}
+
+/** Génère une référence au format AMD-YYYYMMDD-XXXX */
+async function genererReference(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
+  const today = new Date()
+  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '')
+  const debutJour = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString()
+
+  const { count } = await supabase
+    .from('demandes')
+    .select('*', { count: 'exact', head: true })
+    .gte('created_at', debutJour)
+
+  const seq = String((count ?? 0) + 1).padStart(4, '0')
+  return `AMD-${dateStr}-${seq}`
+}
+
+export async function createDemande(payload: DemandePayload): Promise<DemandeCreee> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const reference = await genererReference(supabase)
+  const montantTotal = payload.colis.reduce((s, c) => s + c.tarif_unitaire, 0)
+
+  // Insertion de la demande
+  const { data: demande, error: errDemande } = await supabase
+    .from('demandes')
+    .insert({
+      reference,
+      client_id: user.id,
+      type_variante: payload.type_variante,
+      statut: 'en_attente',
+      adresse_collecte_texte: payload.adresse_collecte_texte,
+      adresse_collecte_lat: payload.adresse_collecte_lat,
+      adresse_collecte_lng: payload.adresse_collecte_lng,
+      montant_total: montantTotal,
+      mode_paiement: 'especes',
+      paiement_statut: 'en_attente',
+      notes: payload.notes || null,
+      qr_code_data: JSON.stringify({ ref: reference }),
+    })
+    .select('id')
+    .single()
+
+  if (errDemande || !demande) throw new Error(errDemande?.message ?? 'Erreur création demande')
+
+  // Génération des références colis et insertion
+  const dateStr = reference.slice(4, 12)
+  const seqDemande = reference.slice(13)
+
+  const colisAInserer = payload.colis.map((c, i) => ({
+    demande_id: demande.id,
+    reference: `COL-${dateStr}-${seqDemande}-${String(i + 1).padStart(2, '0')}`,
+    destination_ville: c.destination_ville,
+    destinataire_nom: c.destinataire_nom,
+    destinataire_telephone: c.destinataire_telephone,
+    destinataire_adresse: c.destinataire_adresse,
+    poids_declare: c.poids_declare,
+    longueur: c.longueur,
+    largeur: c.largeur,
+    hauteur: c.hauteur,
+    tarif_unitaire: c.tarif_unitaire,
+    crbt_montant: c.crbt_montant,
+    statut: 'en_attente',
+  }))
+
+  const { data: colisInsérés, error: errColis } = await supabase
+    .from('colis')
+    .insert(colisAInserer)
+    .select('reference, destinataire_nom, destination_ville')
+
+  if (errColis) throw new Error(errColis.message)
+
+  return {
+    demandeId: demande.id,
+    reference,
+    colisCreés: colisInsérés ?? [],
+  }
+}
