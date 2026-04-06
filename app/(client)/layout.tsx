@@ -19,9 +19,15 @@ export default async function ClientLayout({ children }: { children: React.React
   // Guard rôle : seuls les clients accèdent à ce portail
   if (!profile || profile.role !== 'client') redirect('/')
 
+  const { count: unreadCount } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('destinataire_id', user.id)
+    .eq('lu', false)
+
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar />
+      <Sidebar unreadCount={unreadCount ?? 0} userId={user.id} />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header profile={profile as Profile} />
         <main className="flex-1 overflow-y-auto p-6">

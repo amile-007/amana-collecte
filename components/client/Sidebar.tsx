@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import NotificationsBadge from '@/components/client/notifications/NotificationsBadge'
 
 const NAV_ITEMS = [
   {
@@ -52,7 +53,7 @@ const NAV_ITEMS = [
   },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ unreadCount, userId }: { unreadCount: number; userId: string }) {
   const pathname = usePathname()
 
   return (
@@ -90,10 +91,12 @@ export default function Sidebar() {
                 {item.icon}
               </span>
               {item.label}
-              {/* Indicateur actif */}
-              {isActive && (
+              {/* Badge notifications */}
+              {item.href === '/notifications' ? (
+                <NotificationsBadge initialCount={unreadCount} userId={userId} />
+              ) : isActive ? (
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#CC0000]" />
-              )}
+              ) : null}
             </Link>
           )
         })}

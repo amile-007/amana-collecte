@@ -109,3 +109,32 @@ export async function createDemande(payload: DemandePayload): Promise<DemandeCre
     colisCreés: colisInsérés ?? [],
   }
 }
+
+/** Annule une demande (seulement si statut = en_attente et appartient au client) */
+export async function annulerDemande(id: string): Promise<void> {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: demande } = await supabase
+    .from('demandes')
+    .select('statut, client_id')
+    .eq('id', id)
+    .single()
+
+  if (!demande || demande.client_id !== user.id) throw new Error('Non autorisé')
+  if (demande.statut !== 'en_attente') throw new Error('Cette demande ne peut plus être annulée')
+
+  await supabase.from('demandes').update({ statut: 'annulee' }).eq('id', id)
+
+  await supabase.from('statuts_historique').insert({
+    demande_id: id,
+    statut_avant: 'en_attente',
+    statut_apres: 'annulee',
+    acteur_id: user.id,
+    acteur_role: 'client',
+    commentaire: 'Annulée par le client',
+  })
+
+  redirect('/mes-demandes')
+}
