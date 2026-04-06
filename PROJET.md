@@ -414,9 +414,9 @@ Rabat → Rabat           : 0-5kg = 30 MAD | 5-15kg = 50 MAD | 15-30kg = 80 MAD
 | Module | Statut | Dernière mise à jour | Notes |
 |--------|--------|---------------------|-------|
 | Phase 0 — Installation | ⬜ À faire | — | Node.js, Claude Code, VS Code, Git, Supabase |
-| Schéma base de données | ⬜ À faire | — | Créer toutes les tables dans Supabase |
+| Schéma base de données | ✅ Terminé | 2026-04-06 | Toutes les tables créées dans Supabase |
 | Authentification | ✅ Terminé | 2026-04-06 | Next.js 16.2.2 + Turbopack + Supabase Auth opérationnels |
-| Module 1 — Portail client | 🔄 En cours | 2026-04-06 | Création demande ✅ — historique et suivi GPS restants |
+| Module 1 — Portail client | ✅ Terminé | 2026-04-06 | Dashboard, création demande, historique+GPS, notifications temps réel |
 | Module 2 — Back-office | ⬜ À faire | — | |
 | Module 3 — App mobile | ⬜ À faire | — | |
 | Module 4 — Temps réel GPS | ⬜ À faire | — | |
