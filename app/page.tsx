@@ -1,13 +1,26 @@
 export const dynamic = 'force-dynamic'
 
-// Cette page n'est atteinte que par les utilisateurs authentifiés
-// (le proxy redirige les non-connectés vers /login).
-// Les dashboards par rôle seront ajoutés ici.
-export default function RootPage() {
-  return (
-    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
-      <h1>AMANA Collecte</h1>
-      <p>Connecté — dashboard à venir.</p>
-    </div>
-  )
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+// Redirige chaque rôle vers son portail dès la racine.
+export default async function RootPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  switch (profile?.role) {
+    case 'client':      redirect('/dashboard')
+    case 'chef_centre': redirect('/backoffice')
+    case 'admin':       redirect('/admin')
+    case 'collecteur':  redirect('/mobile')
+    default:            redirect('/login')
+  }
 }

@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AMANA Collecte — BARID AL MAGHRIB",
   description: "Application de collecte de colis AMANA",
+  icons: {
+    icon: '/images/amana-icon.png',
+    apple: '/images/amana-icon.png',
+  },
 };
 
 export default function RootLayout({
