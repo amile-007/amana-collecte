@@ -114,6 +114,38 @@ export interface BaremeTarifaire {
   actif: boolean
 }
 
+// ─── Collecteur ──────────────────────────────────────────────────────────────
+
+export interface Collecteur {
+  id: string
+  centre_id: string
+  zone_intervention: string | null
+  capacite_max_kg: number | null
+  statut: 'disponible' | 'en_mission' | 'indisponible'
+  position_lat: number | null
+  position_lng: number | null
+  position_updated_at: string | null
+}
+
+export interface CollecteurAvecProfil extends Collecteur {
+  nom: string
+  prenom: string
+  telephone: string
+}
+
+// ─── Anomalie ─────────────────────────────────────────────────────────────────
+
+export interface Anomalie {
+  id: string
+  demande_id: string
+  collecteur_id: string
+  type_anomalie: string
+  commentaire: string | null
+  photo_urls: string[] | null
+  statut_traitement: 'ouverte' | 'en_cours' | 'resolue'
+  created_at: string
+}
+
 // ─── Formulaire création demande (state local, pas en base) ──────────────────
 
 export interface ColisFormData {
