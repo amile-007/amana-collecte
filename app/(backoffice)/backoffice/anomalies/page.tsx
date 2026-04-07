@@ -17,7 +17,6 @@ export default async function AnomaliesPage() {
 
   const centreId = profile?.centre_id ?? ''
 
-  // Anomalies ouvertes
   const { data: rawAnomalies } = await supabase
     .from('anomalies')
     .select('id, demande_id, collecteur_id, type_anomalie, commentaire, photo_urls, statut_traitement, created_at')
@@ -51,7 +50,6 @@ export default async function AnomaliesPage() {
       : '',
   }))
 
-  // Collecteurs disponibles pour réaffectation
   const { data: rawCollecteurs } = centreId
     ? await supabase
         .from('collecteurs')

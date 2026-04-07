@@ -21,7 +21,6 @@ export default async function CartePage() {
     ? `centre_id.eq.${centreId},centre_id.is.null`
     : 'centre_id.is.null'
 
-  // Demandes actives avec coordonnées
   const { data: rawDemandes } = await supabase
     .from('demandes')
     .select('id, reference, statut, adresse_collecte_texte, adresse_collecte_lat, adresse_collecte_lng')
@@ -33,7 +32,6 @@ export default async function CartePage() {
     (d) => d.adresse_collecte_lat != null && d.adresse_collecte_lng != null
   ) as DemandeCarte[]
 
-  // Collecteurs du centre avec position
   const { data: rawCollecteurs } = centreId
     ? await supabase
         .from('collecteurs')

@@ -28,7 +28,6 @@ export default async function DemandesPage() {
     .order('created_at', { ascending: false })
     .limit(200)
 
-  // Profils clients + collecteurs en un seul appel
   const allProfileIds = [
     ...new Set([
       ...(rawDemandes?.map((d) => d.client_id) ?? []),
