@@ -37,14 +37,18 @@ export default function CarteBO({
 
   // Initialiser la carte
   useEffect(() => {
-    if (!mapRef.current || leafletRef.current) return
-
-    let L: typeof import('leaflet')
+    if (!mapRef.current) return
+    // Cancelled flag : React Strict Mode appelle l'effet deux fois en dev
+    let cancelled = false
 
     import('leaflet').then((module) => {
-      L = module.default
+      // Si le cleanup a déjà couru, ou si la carte est déjà initialisée → on abandonne
+      if (cancelled || !mapRef.current || leafletRef.current) return
+      // Leaflet ajoute _leaflet_id sur le container si déjà initialisé
+      if ((mapRef.current as unknown as Record<string, unknown>)['_leaflet_id']) return
 
-      const map = L.map(mapRef.current!, {
+      const L = module.default
+      const map = L.map(mapRef.current, {
         center: [33.5731, -7.5898],
         zoom: 12,
         zoomControl: true,
@@ -88,8 +92,11 @@ export default function CarteBO({
     })
 
     return () => {
-      leafletRef.current?.remove()
-      leafletRef.current = null
+      cancelled = true
+      if (leafletRef.current) {
+        leafletRef.current.remove()
+        leafletRef.current = null
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

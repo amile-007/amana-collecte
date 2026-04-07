@@ -119,6 +119,65 @@ export async function annulerDemandeAdmin(demandeId: string): Promise<{ error?: 
   }
 }
 
+export async function toggleCollecteurActif(
+  collecteurId: string,
+  actif: boolean
+): Promise<{ error?: string }> {
+  try {
+    const { supabase } = await getChef()
+    await supabase.from('profiles').update({ actif }).eq('id', collecteurId)
+    revalidatePath('/backoffice/collecteurs')
+    return {}
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erreur inattendue' }
+  }
+}
+
+export async function validerDepot(depotId: string): Promise<{ error?: string }> {
+  try {
+    const { supabase, userId } = await getChef()
+
+    const { data: depot } = await supabase
+      .from('depots')
+      .select('montant_especes_attendu')
+      .eq('id', depotId)
+      .single()
+
+    if (!depot) return { error: 'Dépôt introuvable' }
+
+    await supabase.from('depots').update({
+      statut: 'valide',
+      validated_by: userId,
+      montant_especes_verse: depot.montant_especes_attendu,
+    }).eq('id', depotId)
+
+    revalidatePath('/backoffice/depots')
+    return {}
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erreur inattendue' }
+  }
+}
+
+export async function signalerEcartDepot(
+  depotId: string,
+  montantVerse: number
+): Promise<{ error?: string }> {
+  try {
+    const { supabase, userId } = await getChef()
+
+    await supabase.from('depots').update({
+      statut: 'valide',
+      validated_by: userId,
+      montant_especes_verse: montantVerse,
+    }).eq('id', depotId)
+
+    revalidatePath('/backoffice/depots')
+    return {}
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Erreur inattendue' }
+  }
+}
+
 export async function resoudreAnomalie(
   anomalieId: string,
   action: 'reaffecter' | 'annuler',

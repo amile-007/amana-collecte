@@ -86,12 +86,13 @@ async function fetchKPIs(centreId: string): Promise<KPIs> {
 
 export default function DashboardStats({ initial, centreId }: { initial: KPIs; centreId: string }) {
   const [kpis, setKpis] = useState(initial)
-  const [lastUpdate, setLastUpdate] = useState(new Date())
+  // Null initial pour éviter le hydration mismatch (new Date() diffère server/client)
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     const updated = await fetchKPIs(centreId)
     setKpis(updated)
-    setLastUpdate(new Date())
+    setLastUpdate(new Date().toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
   }, [centreId])
 
   useEffect(() => {
@@ -133,8 +134,7 @@ export default function DashboardStats({ initial, centreId }: { initial: KPIs; c
           />
         </div>
         <p className="text-[10px] text-gray-400 mt-2">
-          Mis à jour à {lastUpdate.toLocaleTimeString('fr-MA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-          {' · '}Temps réel activé
+          {lastUpdate ? `Mis à jour à ${lastUpdate} · ` : ''}Temps réel activé
         </p>
       </div>
     </div>
