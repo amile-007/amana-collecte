@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import Sidebar from '@/components/client/Sidebar'
-import Header from '@/components/client/Header'
+import LayoutShell from '@/components/client/LayoutShell'
 import type { Profile } from '@/lib/types'
 
 export default async function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -16,7 +15,6 @@ export default async function ClientLayout({ children }: { children: React.React
     .eq('id', user.id)
     .single()
 
-  // Guard rôle : seuls les clients accèdent à ce portail
   if (!profile || profile.role !== 'client') redirect('/')
 
   const { count: unreadCount } = await supabase
@@ -26,14 +24,12 @@ export default async function ClientLayout({ children }: { children: React.React
     .eq('lu', false)
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar unreadCount={unreadCount ?? 0} userId={user.id} />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header profile={profile as Profile} />
-        <main className="flex-1 overflow-y-auto p-6">
-          {children}
-        </main>
-      </div>
-    </div>
+    <LayoutShell
+      profile={profile as Profile}
+      unreadCount={unreadCount ?? 0}
+      userId={user.id}
+    >
+      {children}
+    </LayoutShell>
   )
 }

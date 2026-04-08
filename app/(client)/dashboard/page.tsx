@@ -46,14 +46,14 @@ export default async function DashboardPage() {
       </div>
 
       {/* CTA nouvelle demande */}
-      <div className="bg-[#CC0000] rounded-xl p-6 flex items-center justify-between">
+      <div className="bg-[#CC0000] rounded-xl p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-white font-semibold text-lg">Créer une nouvelle demande</p>
           <p className="text-red-200 text-sm mt-1">Planifiez la collecte de vos colis en quelques minutes</p>
         </div>
         <a
           href="/nouvelle-demande"
-          className="shrink-0 bg-white text-[#CC0000] font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-red-50 transition-colors"
+          className="shrink-0 bg-white text-[#CC0000] font-semibold text-sm px-5 py-2.5 rounded-lg hover:bg-red-50 transition-colors text-center"
         >
           Commencer →
         </a>

@@ -61,24 +61,49 @@ const NAV_ITEMS = [
   },
 ]
 
-export default function Sidebar({ centreNom, centreVille }: { centreNom: string; centreVille: string }) {
+interface SidebarProps {
+  centreNom: string
+  centreVille: string
+  isOpen: boolean
+  onClose: () => void
+}
+
+export default function Sidebar({ centreNom, centreVille, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname()
 
   return (
-    <aside className="flex flex-col w-64 shrink-0 bg-white border-r border-gray-200 h-screen">
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-gray-100">
-        <Image
-          src="/images/amana-icon.png"
-          alt="AMANA"
-          width={36}
-          height={36}
-          className="rounded-lg shrink-0"
-        />
-        <div>
-          <div className="text-sm font-bold text-gray-900 leading-tight">AMANA Collecte</div>
-          <div className="text-[10px] font-medium text-[#CC0000] uppercase tracking-wider">Back-office</div>
+    <aside
+      className={`
+        fixed inset-y-0 left-0 z-50 flex flex-col w-64 shrink-0 bg-white border-r border-gray-200
+        transform transition-transform duration-300 ease-in-out
+        md:relative md:translate-x-0 md:z-auto
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}
+    >
+      {/* Logo + close */}
+      <div className="flex items-center justify-between px-5 py-5 border-b border-gray-100">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/images/amana-icon.png"
+            alt="AMANA"
+            width={36}
+            height={36}
+            className="rounded-lg shrink-0"
+          />
+          <div>
+            <div className="text-sm font-bold text-gray-900 leading-tight">AMANA Collecte</div>
+            <div className="text-[10px] font-medium text-[#CC0000] uppercase tracking-wider">Back-office</div>
+          </div>
         </div>
+        <button
+          onClick={onClose}
+          className="md:hidden p-1 text-gray-400 hover:text-gray-600 transition-colors"
+          aria-label="Fermer le menu"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       </div>
 
       {/* Centre info */}
@@ -95,6 +120,7 @@ export default function Sidebar({ centreNom, centreVille }: { centreNom: string;
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-red-50 text-[#CC0000]'

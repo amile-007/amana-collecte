@@ -23,37 +23,40 @@ export default function DemandeCard({
   })
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 flex items-start justify-between gap-4 hover:border-gray-300 hover:shadow-sm transition-all">
-      <div className="flex flex-col gap-2 min-w-0">
-        {/* Référence + statut */}
-        <div className="flex items-center gap-2.5 flex-wrap">
-          <span className="font-mono text-sm font-bold text-gray-900">{reference}</span>
-          <StatutBadge statut={statut} />
+    <div className="bg-white border border-gray-200 rounded-xl p-4 sm:p-5 hover:border-gray-300 hover:shadow-sm transition-all">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-2 min-w-0 flex-1">
+          {/* Référence + statut */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-sm font-bold text-gray-900">{reference}</span>
+            <StatutBadge statut={statut} />
+          </div>
+
+          {/* Adresse tronquée */}
+          <p className="text-xs text-gray-500 truncate">{adresseCollecte}</p>
+
+          {/* Méta — flex-wrap pour éviter le débordement */}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-400">
+            <span>{date}</span>
+            <span className="hidden xs:inline">à {heure}</span>
+            <span>·</span>
+            <span>{nombreColis} colis</span>
+            {montantTotal !== null && (
+              <>
+                <span>·</span>
+                <span className="font-semibold text-gray-600">{montantTotal} MAD</span>
+              </>
+            )}
+          </div>
         </div>
 
-        {/* Adresse tronquée */}
-        <p className="text-xs text-gray-500 truncate max-w-xs">{adresseCollecte}</p>
-
-        {/* Méta */}
-        <div className="flex items-center gap-3 text-xs text-gray-400">
-          <span>{date} à {heure}</span>
-          <span>·</span>
-          <span>{nombreColis} colis</span>
-          {montantTotal !== null && (
-            <>
-              <span>·</span>
-              <span className="font-semibold text-gray-600">{montantTotal} MAD</span>
-            </>
-          )}
-        </div>
+        <Link
+          href={`/mes-demandes/${id}`}
+          className="shrink-0 text-xs font-medium text-[#CC0000] hover:underline whitespace-nowrap"
+        >
+          Voir →
+        </Link>
       </div>
-
-      <Link
-        href={`/mes-demandes/${id}`}
-        className="shrink-0 text-xs font-medium text-[#CC0000] hover:underline whitespace-nowrap"
-      >
-        Voir détail →
-      </Link>
     </div>
   )
 }

@@ -99,7 +99,7 @@ export default function RegisterPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Prénom" name="prenom" type="text" placeholder="Youssef"
             value={form.prenom} onChange={handleChange} error={fieldErrors.prenom} autoComplete="given-name" />
           <Input label="Nom" name="nom" type="text" placeholder="Benali"

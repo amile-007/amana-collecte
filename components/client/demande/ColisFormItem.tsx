@@ -152,7 +152,7 @@ export default function ColisFormItem({
       </div>
 
       {/* Destinataire */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <label className={labelCls}>Nom destinataire *</label>
           <input className={inputCls} placeholder="Ex. : Karim Alaoui" value={data.destinataire_nom} onChange={set('destinataire_nom')} />
@@ -210,7 +210,7 @@ export default function ColisFormItem({
       {/* Dimensions + poids */}
       <div>
         <p className={`${labelCls} mb-2`}>Dimensions et poids *</p>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="flex flex-col gap-1">
             <span className="text-[10px] text-gray-400 text-center">Poids (kg)</span>
             <input className={`${inputCls} text-center`} type="number" min="0.1" step="0.1" placeholder="0.0" value={data.poids_declare} onChange={set('poids_declare')} />

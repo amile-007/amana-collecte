@@ -1,27 +1,38 @@
-import Image from 'next/image'
 import { signOut } from '@/lib/actions/auth'
 import type { Profile } from '@/lib/types'
 
 interface HeaderProps {
   profile: Profile
+  onMenuClick: () => void
 }
 
-export default function Header({ profile }: HeaderProps) {
+export default function Header({ profile, onMenuClick }: HeaderProps) {
   const initials = `${profile.prenom?.[0] ?? ''}${profile.nom?.[0] ?? ''}`.toUpperCase()
   const fullName = `${profile.prenom} ${profile.nom}`
 
   return (
-    <header className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-      {/* Titre de la page — sera surchargé par chaque page via slot si besoin */}
+    <header className="h-14 shrink-0 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-6">
+      {/* Gauche : hamburger (mobile) + label */}
       <div className="flex items-center gap-2">
-        <div className="h-2 w-2 rounded-full bg-[#CC0000]" />
-        <span className="text-sm font-medium text-gray-500">Portail client</span>
+        {/* Bouton hamburger visible uniquement sur mobile */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-1.5 -ml-1 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          aria-label="Ouvrir le menu"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <div className="hidden md:flex items-center gap-2">
+          <div className="h-2 w-2 rounded-full bg-[#CC0000]" />
+          <span className="text-sm font-medium text-gray-500">Portail client</span>
+        </div>
       </div>
 
-      {/* Infos utilisateur + déconnexion */}
-      <div className="flex items-center gap-4">
+      {/* Droite : avatar + déconnexion */}
+      <div className="flex items-center gap-3">
         <div className="flex items-center gap-2.5">
-          {/* Avatar initiales */}
           <div className="h-8 w-8 rounded-full bg-[#CC0000] flex items-center justify-center shrink-0">
             <span className="text-white text-xs font-bold">{initials}</span>
           </div>
@@ -31,7 +42,6 @@ export default function Header({ profile }: HeaderProps) {
           </div>
         </div>
 
-        {/* Bouton déconnexion — form action server */}
         <form action={signOut}>
           <button
             type="submit"
