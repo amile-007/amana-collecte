@@ -1,7 +1,14 @@
 'use client'
 
+import { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { VILLES_DEMO, calculerPoidsVolumetrique, calculerPoidsReference, calculerTarif } from '@/lib/utils/tarification'
 import type { VilleDemo } from '@/lib/utils/tarification'
+
+const MapPickerMini = dynamic(() => import('./MapPicker'), {
+  ssr: false,
+  loading: () => <div className="h-48 bg-gray-100 rounded-lg animate-pulse" />,
+})
 
 export interface ColisItemData {
   _id: string
@@ -9,6 +16,8 @@ export interface ColisItemData {
   destinataire_nom: string
   destinataire_telephone: string
   destinataire_adresse: string
+  destinataire_lat: number | null
+  destinataire_lng: number | null
   poids_declare: string
   longueur: string
   largeur: string
@@ -23,6 +32,8 @@ export function defaultColis(): ColisItemData {
     destinataire_nom: '',
     destinataire_telephone: '',
     destinataire_adresse: '',
+    destinataire_lat: null,
+    destinataire_lng: null,
     poids_declare: '',
     longueur: '',
     largeur: '',
@@ -43,8 +54,12 @@ interface ColisFormItemProps {
 export default function ColisFormItem({
   index, data, villeCollecte, canDelete, onChange, onDelete,
 }: ColisFormItemProps) {
-  const set = (key: keyof ColisItemData) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
-    onChange({ ...data, [key]: e.target.value })
+  const [showMap, setShowMap] = useState(false)
+  const [geoLoading, setGeoLoading] = useState(false)
+
+  const set = (key: keyof ColisItemData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      onChange({ ...data, [key]: e.target.value })
 
   // Calculs en temps réel
   const p = parseFloat(data.poids_declare) || 0
@@ -54,6 +69,28 @@ export default function ColisFormItem({
   const poidsVol = l && larg && h ? calculerPoidsVolumetrique(l, larg, h) : 0
   const poidsRef = p || poidsVol ? calculerPoidsReference(p, poidsVol) : 0
   const tarif = poidsRef ? calculerTarif(villeCollecte, data.destination_ville, poidsRef) : 0
+
+  // Détection intra/inter-ville
+  const isIntraVille = villeCollecte === data.destination_ville
+
+  // Reverse geocoding sur clic carte
+  const handleMapPick = async (lat: number, lng: number) => {
+    onChange({ ...data, destinataire_lat: lat, destinataire_lng: lng })
+    setGeoLoading(true)
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=fr`,
+        { headers: { 'Accept-Language': 'fr' } }
+      )
+      const json = await res.json()
+      const adresse = json.display_name ?? ''
+      onChange({ ...data, destinataire_lat: lat, destinataire_lng: lng, destinataire_adresse: adresse })
+    } catch {
+      onChange({ ...data, destinataire_lat: lat, destinataire_lng: lng })
+    } finally {
+      setGeoLoading(false)
+    }
+  }
 
   const labelCls = 'text-xs font-medium text-gray-600'
   const inputCls = 'w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-[#CC0000] focus:border-transparent'
@@ -82,7 +119,7 @@ export default function ColisFormItem({
         )}
       </div>
 
-      {/* Destination */}
+      {/* Destination + badge variante */}
       <div className="flex flex-col gap-1.5">
         <label className={labelCls}>Ville de destination *</label>
         <div className="flex gap-2">
@@ -101,6 +138,17 @@ export default function ColisFormItem({
             </button>
           ))}
         </div>
+        {/* Badge intra/inter-ville */}
+        <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium mt-0.5 ${
+          isIntraVille
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-blue-50 text-blue-700 border border-blue-200'
+        }`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${isIntraVille ? 'bg-green-500' : 'bg-blue-500'}`} />
+          {isIntraVille
+            ? 'Intra-ville — livraison directe par le collecteur'
+            : 'Inter-ville — injection réseau BARID AL MAGHRIB'}
+        </div>
       </div>
 
       {/* Destinataire */}
@@ -114,9 +162,49 @@ export default function ColisFormItem({
           <input className={inputCls} placeholder="+212 6 00 00 00 00" value={data.destinataire_telephone} onChange={set('destinataire_telephone')} type="tel" />
         </div>
       </div>
+
+      {/* Adresse livraison + mini carte */}
       <div className="flex flex-col gap-1.5">
-        <label className={labelCls}>Adresse de livraison *</label>
-        <input className={inputCls} placeholder="Ex. : 5 Bd Zerktouni, Casablanca" value={data.destinataire_adresse} onChange={set('destinataire_adresse')} />
+        <div className="flex items-center justify-between">
+          <label className={labelCls}>Adresse de livraison *</label>
+          <button
+            type="button"
+            onClick={() => setShowMap((v) => !v)}
+            className="text-xs text-[#CC0000] hover:underline flex items-center gap-1"
+          >
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            {showMap ? 'Masquer la carte' : 'Choisir sur la carte'}
+          </button>
+        </div>
+        <div className="relative">
+          <input
+            className={inputCls}
+            placeholder="Ex. : 5 Bd Zerktouni, Casablanca"
+            value={data.destinataire_adresse}
+            onChange={set('destinataire_adresse')}
+          />
+          {geoLoading && (
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-gray-400 animate-pulse">
+              Géoloc…
+            </span>
+          )}
+        </div>
+        {data.destinataire_lat && data.destinataire_lng && (
+          <p className="text-[10px] text-green-600 font-mono">
+            ✓ Position GPS : {data.destinataire_lat.toFixed(5)}, {data.destinataire_lng.toFixed(5)}
+          </p>
+        )}
+        {showMap && (
+          <MapPickerMini
+            lat={data.destinataire_lat}
+            lng={data.destinataire_lng}
+            onPick={handleMapPick}
+            height={200}
+          />
+        )}
       </div>
 
       {/* Dimensions + poids */}

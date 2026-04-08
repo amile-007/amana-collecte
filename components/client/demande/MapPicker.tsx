@@ -46,15 +46,16 @@ interface MapPickerProps {
   lat: number | null
   lng: number | null
   onPick: (lat: number, lng: number) => void
+  height?: number
 }
 
 const CASABLANCA: [number, number] = [33.5731, -7.5898]
 
-export default function MapPicker({ lat, lng, onPick }: MapPickerProps) {
+export default function MapPicker({ lat, lng, onPick, height = 320 }: MapPickerProps) {
   const position: [number, number] = lat && lng ? [lat, lng] : CASABLANCA
 
   return (
-    <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ height: 320 }}>
+    <div className="relative rounded-xl overflow-hidden border border-gray-200" style={{ height }}>
       <MapContainer
         center={CASABLANCA}
         zoom={13}

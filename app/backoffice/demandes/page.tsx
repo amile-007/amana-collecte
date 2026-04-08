@@ -4,7 +4,12 @@ import DemandesBO from '@/components/backoffice/demandes/DemandesBO'
 import type { DemandePourBO } from '@/components/backoffice/demandes/DemandesBO'
 import type { CollecteurAvecProfil } from '@/lib/types'
 
-export default async function DemandesPage() {
+interface PageProps {
+  searchParams: Promise<{ statut?: string; periode?: string }>
+}
+
+export default async function DemandesPage({ searchParams }: PageProps) {
+  const params = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -85,7 +90,12 @@ export default async function DemandesPage() {
           Gérez et affectez les demandes de collecte de votre centre
         </p>
       </div>
-      <DemandesBO demandes={demandes} collecteurs={collecteurs} />
+      <DemandesBO
+        demandes={demandes}
+        collecteurs={collecteurs}
+        initialStatut={params.statut ?? ''}
+        initialPeriode={params.periode ?? 'all'}
+      />
     </div>
   )
 }

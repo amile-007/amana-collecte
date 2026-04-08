@@ -112,12 +112,15 @@ function CollecteurRow({
   )
 }
 
-export default function CollecteursBO({ initial }: { initial: CollecteurPourBO[] }) {
+export default function CollecteursBO({ initial, initialStatut = '' }: { initial: CollecteurPourBO[]; initialStatut?: string }) {
   const [collecteurs, setCollecteurs] = useState(initial)
+  const [filtreStatut, setFiltreStatut] = useState(initialStatut)
 
   const handleToggle = (id: string, actif: boolean) => {
     setCollecteurs((prev) => prev.map((c) => (c.id === id ? { ...c, actif } : c)))
   }
+
+  const filtered = filtreStatut ? collecteurs.filter((c) => c.statut === filtreStatut) : collecteurs
 
   const disponibles = collecteurs.filter((c) => c.statut === 'disponible' && c.actif).length
   const enMission  = collecteurs.filter((c) => c.statut === 'en_mission').length
@@ -146,6 +149,18 @@ export default function CollecteursBO({ initial }: { initial: CollecteurPourBO[]
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+            <select
+              value={filtreStatut}
+              onChange={(e) => setFiltreStatut(e.target.value)}
+              className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-red-200"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="disponible">Disponible</option>
+              <option value="en_mission">En mission</option>
+              <option value="indisponible">Indisponible</option>
+            </select>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -159,14 +174,14 @@ export default function CollecteursBO({ initial }: { initial: CollecteurPourBO[]
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {collecteurs.map((c) => (
+                {filtered.map((c) => (
                   <CollecteurRow key={c.id} c={c} onToggle={handleToggle} />
                 ))}
               </tbody>
             </table>
           </div>
           <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <p className="text-xs text-gray-500">{collecteurs.length} collecteur{collecteurs.length > 1 ? 's' : ''}</p>
+            <p className="text-xs text-gray-500">{filtered.length} collecteur{filtered.length > 1 ? 's' : ''}</p>
           </div>
         </div>
       )}

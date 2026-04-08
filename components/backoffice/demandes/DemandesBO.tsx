@@ -184,14 +184,18 @@ function filterByDate(demandes: DemandePourBO[], periode: string): DemandePourBO
 export default function DemandesBO({
   demandes: initial,
   collecteurs,
+  initialStatut = '',
+  initialPeriode = 'all',
 }: {
   demandes: DemandePourBO[]
   collecteurs: CollecteurAvecProfil[]
+  initialStatut?: string
+  initialPeriode?: string
 }) {
   const router = useRouter()
   const [demandes, setDemandes] = useState(initial)
-  const [filtreStatut, setFiltreStatut] = useState('')
-  const [filtreDate, setFiltreDate] = useState('all')
+  const [filtreStatut, setFiltreStatut] = useState(initialStatut)
+  const [filtreDate, setFiltreDate] = useState(initialPeriode)
   const [filtreCollecteur, setFiltreCollecteur] = useState('')
   const [recherche, setRecherche] = useState('')
   const [modal, setModal] = useState<DemandePourBO | null>(null)

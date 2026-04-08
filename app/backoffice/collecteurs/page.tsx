@@ -3,7 +3,12 @@ import { createClient } from '@/lib/supabase/server'
 import CollecteursBO from '@/components/backoffice/collecteurs/CollecteursBO'
 import type { CollecteurPourBO } from '@/components/backoffice/collecteurs/CollecteursBO'
 
-export default async function CollecteursPage() {
+interface PageProps {
+  searchParams: Promise<{ statut?: string }>
+}
+
+export default async function CollecteursPage({ searchParams }: PageProps) {
+  const params = await searchParams
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -77,7 +82,7 @@ export default async function CollecteursPage() {
           Gérez l&apos;équipe de collecteurs de votre centre
         </p>
       </div>
-      <CollecteursBO initial={collecteurs} />
+      <CollecteursBO initial={collecteurs} initialStatut={params.statut ?? ''} />
     </div>
   )
 }

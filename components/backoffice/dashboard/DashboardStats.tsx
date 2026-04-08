@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import { Clock, Users, PackageCheck, AlertTriangle, ArrowRight } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 export interface KPIs {
@@ -15,34 +17,42 @@ const CARDS = [
   {
     key: 'demandesEnAttente' as const,
     label: 'Demandes en attente',
-    icon: '📦',
+    Icon: Clock,
     bg: 'bg-orange-50',
     border: 'border-orange-200',
     text: 'text-orange-600',
+    iconBg: 'bg-orange-100',
+    href: '/backoffice/demandes?statut=en_attente',
   },
   {
     key: 'collecteursDisponibles' as const,
     label: 'Collecteurs disponibles',
-    icon: '🚴',
+    Icon: Users,
     bg: 'bg-green-50',
     border: 'border-green-200',
     text: 'text-green-600',
+    iconBg: 'bg-green-100',
+    href: '/backoffice/collecteurs?statut=disponible',
   },
   {
     key: 'demandesCollecteesAujourdhui' as const,
     label: "Collectées aujourd'hui",
-    icon: '✅',
+    Icon: PackageCheck,
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     text: 'text-blue-600',
+    iconBg: 'bg-blue-100',
+    href: '/backoffice/demandes?statut=collectee&periode=today',
   },
   {
     key: 'anomaliesOuvertes' as const,
     label: 'Anomalies ouvertes',
-    icon: '⚠️',
+    Icon: AlertTriangle,
     bg: 'bg-red-50',
     border: 'border-red-200',
     text: 'text-[#CC0000]',
+    iconBg: 'bg-red-100',
+    href: '/backoffice/anomalies',
   },
 ]
 
@@ -111,11 +121,20 @@ export default function DashboardStats({ initial, centreId }: { initial: KPIs; c
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {CARDS.map((card) => (
-          <div key={card.key} className={`rounded-xl border p-5 ${card.bg} ${card.border}`}>
-            <span className="text-2xl">{card.icon}</span>
+          <Link
+            key={card.key}
+            href={card.href}
+            className={`rounded-xl border p-5 flex flex-col group transition-all hover:shadow-md hover:border-[#CC0000]/40 cursor-pointer ${card.bg} ${card.border}`}
+          >
+            <div className="flex items-start justify-between">
+              <div className={`h-9 w-9 rounded-lg ${card.iconBg} flex items-center justify-center shrink-0`}>
+                <card.Icon className={`h-5 w-5 ${card.text}`} />
+              </div>
+              <ArrowRight className={`h-4 w-4 ${card.text} opacity-0 group-hover:opacity-100 transition-opacity mt-0.5`} />
+            </div>
             <p className={`text-4xl font-bold mt-3 ${card.text}`}>{kpis[card.key]}</p>
             <p className="text-xs text-gray-500 mt-1 leading-snug">{card.label}</p>
-          </div>
+          </Link>
         ))}
       </div>
 

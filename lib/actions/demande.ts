@@ -8,6 +8,8 @@ export interface ColisPayload {
   destinataire_nom: string
   destinataire_telephone: string
   destinataire_adresse: string
+  destinataire_lat: number | null
+  destinataire_lng: number | null
   poids_declare: number
   longueur: number
   largeur: number
@@ -87,6 +89,8 @@ export async function createDemande(payload: DemandePayload): Promise<DemandeCre
     destinataire_nom: c.destinataire_nom,
     destinataire_telephone: c.destinataire_telephone,
     destinataire_adresse: c.destinataire_adresse,
+    destinataire_lat: c.destinataire_lat,
+    destinataire_lng: c.destinataire_lng,
     poids_declare: c.poids_declare,
     longueur: c.longueur,
     largeur: c.largeur,
