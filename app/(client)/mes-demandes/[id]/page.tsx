@@ -106,7 +106,12 @@ export default async function DetailDemandePage({ params }: PageProps) {
             lng={collecteurPosition?.position_lng ?? null}
             collecteurNom={
               collecteurPosition?.profiles
-                ? `${(collecteurPosition.profiles as { prenom: string; nom: string }).prenom} ${(collecteurPosition.profiles as { prenom: string; nom: string }).nom}`
+                ? (() => {
+                    const p = Array.isArray(collecteurPosition.profiles)
+                      ? collecteurPosition.profiles[0]
+                      : collecteurPosition.profiles as { prenom: string; nom: string }
+                    return p ? `${p.prenom} ${p.nom}` : undefined
+                  })()
                 : undefined
             }
             updatedAt={collecteurPosition?.position_updated_at}

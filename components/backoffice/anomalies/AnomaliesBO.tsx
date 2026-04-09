@@ -221,7 +221,14 @@ export default function AnomaliesBO({
             supabase.from('profiles').select('nom, prenom').eq('id', a.collecteur_id).single(),
           ])
           const enriched: AnomaliePourBO = {
-            ...a,
+            id: a.id as string,
+            demande_id: a.demande_id as string,
+            collecteur_id: a.collecteur_id as string,
+            type_anomalie: a.type_anomalie as string,
+            commentaire: (a.commentaire as string | null) ?? null,
+            photo_urls: (a.photo_urls as string[] | null) ?? null,
+            statut_traitement: a.statut_traitement as AnomaliePourBO['statut_traitement'],
+            created_at: a.created_at as string,
             demande_reference: demande?.reference ?? '',
             demande_adresse: demande?.adresse_collecte_texte ?? '',
             collecteur_nom: collecteur ? `${collecteur.prenom} ${collecteur.nom}` : '',
