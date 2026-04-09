@@ -418,10 +418,10 @@ Rabat → Rabat           : 0-5kg = 30 MAD | 5-15kg = 50 MAD | 15-30kg = 80 MAD
 | Authentification | ✅ Terminé | 2026-04-06 | Next.js 16.2.2 + Turbopack + Supabase Auth opérationnels |
 | Module 1 — Portail client | ✅ Terminé | 2026-04-06 | Dashboard, création demande, historique+GPS, notifications temps réel |
 | Module 2 — Back-office | ✅ Terminé | 2026-04-07 | Dashboard KPIs, demandes+affectation, carte GPS, collecteurs, dépôts, anomalies |
-| Module 3 — App mobile | ⬜ À faire | — | |
+| Module 3 — App mobile | ✅ Terminé | 2026-04-09 | Flux complet validé — missions, carte, profil, scan, anomalie, livraison |
 | Module 4 — Temps réel GPS | ⬜ À faire | — | |
 | Module 5 — Administration | ⬜ À faire | — | |
-| Données de démo | ⬜ À faire | — | Seed script |
+| Données de démo | ✅ Terminé | 2026-04-09 | AMD-DEMO-0001 opérationnel — seed-demo.sql validé |
 | Déploiement Vercel | ⬜ À faire | — | |
 | Tests scénario démo | ⬜ À faire | — | |
 
