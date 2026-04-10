@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
 
     // Rate limiting : 1 update / 5 secondes par collecteur
-    if (!rateLimits.updatePosition(user.id)) {
+    if (!await rateLimits.updatePosition(user.id)) {
       return NextResponse.json({ error: 'Trop de mises à jour' }, { status: 429 })
     }
 
