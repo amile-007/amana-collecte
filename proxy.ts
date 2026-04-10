@@ -30,13 +30,8 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(loginUrl)
     }
 
-    if (user && isPublicPath) {
-      console.log(`[proxy] → redirect / (already authenticated)`)
-      const homeUrl = request.nextUrl.clone()
-      homeUrl.pathname = '/'
-      homeUrl.search = ''
-      return NextResponse.redirect(homeUrl)
-    }
+    // Ne pas rediriger les utilisateurs connectés hors des pages publiques :
+    // app/page.tsx gère la redirection par rôle — évite la boucle infinie.
 
     return supabaseResponse
   } catch (err) {

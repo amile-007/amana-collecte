@@ -422,8 +422,8 @@ Rabat → Rabat           : 0-5kg = 30 MAD | 5-15kg = 50 MAD | 15-30kg = 80 MAD
 | Module 4 — Temps réel GPS | ⬜ À faire | — | |
 | Module 5 — Administration | ⬜ À faire | — | |
 | Données de démo | ✅ Terminé | 2026-04-09 | AMD-DEMO-0001 opérationnel — seed-demo.sql validé |
-| Déploiement Vercel | ⬜ À faire | — | |
-| Tests scénario démo | ⬜ À faire | — | |
+| Déploiement Vercel | ✅ Terminé | 2026-04-10 | https://amana-collecte.vercel.app opérationnel |
+| Tests scénario démo | 🔄 À faire | 2026-04-10 | |
 
 **Légende :** ⬜ À faire | 🔄 En cours | ✅ Terminé | ❌ Bloqué
 
