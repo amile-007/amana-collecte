@@ -46,6 +46,7 @@ export default function Step3Recap({ step1, colis, onBack }: Step3Props) {
           adresse_collecte_texte: step1.adresseTexte,
           adresse_collecte_lat: step1.lat,
           adresse_collecte_lng: step1.lng,
+          ville_collecte: step1.villeCollecte,
           type_variante: colisCalculés.every((c) => c.destination_ville === step1.villeCollecte) ? 'intra_ville' : 'inter_ville',
           notes: '',
           colis: colisCalculés.map((c) => ({

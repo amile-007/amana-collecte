@@ -22,6 +22,7 @@ export interface DemandePayload {
   adresse_collecte_texte: string
   adresse_collecte_lat: number | null
   adresse_collecte_lng: number | null
+  ville_collecte: string   // ex: 'Casablanca' | 'Rabat' — sert à rattacher le bon centre
   type_variante: 'inter_ville' | 'intra_ville'
   notes: string
   colis: ColisPayload[]
@@ -56,12 +57,22 @@ export async function createDemande(payload: DemandePayload): Promise<DemandeCre
   const reference = await genererReference(supabase)
   const montantTotal = payload.colis.reduce((s, c) => s + c.tarif_unitaire, 0)
 
+  // Récupérer le centre correspondant à la ville de collecte
+  const { data: centre } = await supabase
+    .from('centres')
+    .select('id')
+    .eq('ville', payload.ville_collecte)
+    .eq('actif', true)
+    .limit(1)
+    .single()
+
   // Insertion de la demande
   const { data: demande, error: errDemande } = await supabase
     .from('demandes')
     .insert({
       reference,
       client_id: user.id,
+      centre_id: centre?.id ?? null,
       type_variante: payload.type_variante,
       statut: 'en_attente',
       adresse_collecte_texte: payload.adresse_collecte_texte,
