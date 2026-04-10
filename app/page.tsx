@@ -20,7 +20,7 @@ export default async function RootPage() {
     case 'client':      redirect('/dashboard')
     case 'chef_centre': redirect('/backoffice')
     case 'admin':       redirect('/admin')
-    case 'collecteur':  redirect('/dashboard')
+    case 'collecteur':  redirect('/collecteur/missions')
     default:            redirect('/login')
   }
 }
