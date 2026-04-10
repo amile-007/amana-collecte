@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
 interface MissionPoint {
   id: string
@@ -18,9 +18,13 @@ const STATUT_COLOR: Record<string, string> = {
   anomalie: '#EF4444',
 }
 
+const GPS_INTERVAL_MS = 10_000 // 10 secondes
+
 export default function CarteCollecteur({ missions }: { missions: MissionPoint[] }) {
   const mapRef = useRef<HTMLDivElement>(null)
   const leafletRef = useRef<ReturnType<typeof import('leaflet')['map']> | null>(null)
+  const [gpsActif, setGpsActif] = useState(false)
+  const [gpsErreur, setGpsErreur] = useState<string | null>(null)
 
   useEffect(() => {
     if (!mapRef.current) return
@@ -92,11 +96,64 @@ export default function CarteCollecteur({ missions }: { missions: MissionPoint[]
     }
   }, [])
 
+  // Envoi de position GPS toutes les 10 secondes via l'API
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setGpsErreur('Géolocalisation non supportée')
+      return
+    }
+
+    let intervalId: ReturnType<typeof setInterval> | null = null
+
+    const envoyerPosition = (lat: number, lng: number) => {
+      fetch('/api/collecteurs/position', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lat, lng }),
+      }).catch(() => {/* silencieux en cas d'erreur réseau */})
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGpsActif(true)
+        setGpsErreur(null)
+        envoyerPosition(pos.coords.latitude, pos.coords.longitude)
+
+        intervalId = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(
+            (p) => envoyerPosition(p.coords.latitude, p.coords.longitude),
+            () => {/* silencieux */},
+            { enableHighAccuracy: true, timeout: 8000 }
+          )
+        }, GPS_INTERVAL_MS)
+      },
+      (err) => {
+        setGpsErreur(err.code === 1 ? 'Accès GPS refusé' : 'Position GPS indisponible')
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+
+    return () => {
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [])
+
   return (
     <div className="flex flex-col h-full gap-3 p-4">
       <div>
         <h1 className="text-base font-bold text-gray-900">Mes missions du jour</h1>
-        <p className="text-xs text-gray-500 mt-0.5">{missions.length} point{missions.length !== 1 ? 's' : ''} sur la carte</p>
+        <div className="flex items-center gap-3 mt-0.5">
+          <p className="text-xs text-gray-500">{missions.length} point{missions.length !== 1 ? 's' : ''} sur la carte</p>
+          {gpsActif && (
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+              GPS actif
+            </span>
+          )}
+          {gpsErreur && (
+            <span className="text-xs text-amber-500">{gpsErreur}</span>
+          )}
+        </div>
       </div>
 
       {/* Legend */}

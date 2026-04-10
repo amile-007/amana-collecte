@@ -104,6 +104,7 @@ export default async function DetailDemandePage({ params }: PageProps) {
           <SuiviGPS
             lat={collecteurPosition?.position_lat ?? null}
             lng={collecteurPosition?.position_lng ?? null}
+            collecteurId={demande.collecteur_id}
             collecteurNom={
               collecteurPosition?.profiles
                 ? (() => {

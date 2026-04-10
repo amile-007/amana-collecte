@@ -419,8 +419,8 @@ Rabat → Rabat           : 0-5kg = 30 MAD | 5-15kg = 50 MAD | 15-30kg = 80 MAD
 | Module 1 — Portail client | ✅ Terminé | 2026-04-06 | Dashboard, création demande, historique+GPS, notifications temps réel |
 | Module 2 — Back-office | ✅ Terminé | 2026-04-07 | Dashboard KPIs, demandes+affectation, carte GPS, collecteurs, dépôts, anomalies |
 | Module 3 — App mobile | ✅ Terminé | 2026-04-09 | Flux complet validé — missions, carte, profil, scan, anomalie, livraison |
-| Module 4 — Temps réel GPS | ⬜ À faire | — | |
-| Module 5 — Administration | ⬜ À faire | — | |
+| Module 4 — Temps réel GPS | ✅ Terminé | 2026-04-11 | SuiviGPS Realtime (client), envoi GPS 10s (collecteur web) |
+| Module 5 — Administration | ✅ Terminé | 2026-04-11 | Dashboard KPIs, barèmes tarifaires, utilisateurs, journal audit |
 | Données de démo | ✅ Terminé | 2026-04-09 | AMD-DEMO-0001 opérationnel — seed-demo.sql validé |
 | Déploiement Vercel | ✅ Terminé | 2026-04-10 | https://amana-collecte.vercel.app opérationnel |
 | Tests scénario démo | 🔄 À faire | 2026-04-10 | |
