@@ -4,10 +4,10 @@ import MissionCard from '@/components/collecteur/MissionCard'
 export const dynamic = 'force-dynamic'
 
 const STATUT_ORDER: Record<string, number> = {
-  en_cours: 0,
-  affectee: 1,
-  collectee: 2,
-  anomalie: 3,
+  en_cours:  0,
+  collectee: 1,
+  affectee:  2,
+  anomalie:  3,
 }
 
 export default async function MissionsPage() {
@@ -16,7 +16,7 @@ export default async function MissionsPage() {
 
   const { data: demandes } = await supabase
     .from('demandes')
-    .select('id, reference, adresse_collecte_texte, statut, notes, colis(id)')
+    .select('id, reference, adresse_collecte_texte, statut, type_variante, notes, colis(id)')
     .eq('collecteur_id', user!.id)
     .in('statut', ['affectee', 'en_cours', 'collectee', 'anomalie'])
     .order('updated_at', { ascending: false })
@@ -27,13 +27,24 @@ export default async function MissionsPage() {
       reference: d.reference,
       adresse_collecte_texte: d.adresse_collecte_texte,
       statut: d.statut,
+      type_variante: d.type_variante as 'intra_ville' | 'inter_ville',
       nb_colis: Array.isArray(d.colis) ? d.colis.length : 0,
       notes: d.notes,
     }))
     .sort((a, b) => (STATUT_ORDER[a.statut] ?? 99) - (STATUT_ORDER[b.statut] ?? 99))
 
-  const actives = missions.filter((m) => ['affectee', 'en_cours'].includes(m.statut))
-  const terminees = missions.filter((m) => ['collectee', 'anomalie'].includes(m.statut))
+  // collectee intra-ville = encore active (bouton "Livrer")
+  const actives = missions.filter(
+    (m) =>
+      ['affectee', 'en_cours'].includes(m.statut) ||
+      (m.statut === 'collectee' && m.type_variante === 'intra_ville')
+  )
+  // collectee inter-ville ou anomalie = terminée côté collecteur
+  const terminees = missions.filter(
+    (m) =>
+      m.statut === 'anomalie' ||
+      (m.statut === 'collectee' && m.type_variante === 'inter_ville')
+  )
 
   return (
     <div className="p-4 flex flex-col gap-4">
@@ -41,8 +52,8 @@ export default async function MissionsPage() {
       {/* Stats bar */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: 'Total', value: missions.length, color: 'text-gray-900' },
-          { label: 'En cours', value: actives.length, color: 'text-amber-600' },
+          { label: 'Total',     value: missions.length,  color: 'text-gray-900' },
+          { label: 'En cours',  value: actives.length,   color: 'text-amber-600' },
           { label: 'Terminées', value: terminees.length, color: 'text-green-600' },
         ].map((s) => (
           <div key={s.label} className="bg-white rounded-xl border border-gray-100 p-3 text-center">

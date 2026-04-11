@@ -1,21 +1,22 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useRouter } from 'next/navigation'
 import { demarrerMission, confirmerCollecte, declarerAnomalie } from '@/lib/actions/collecteur'
 
 const TYPES_ANOMALIE = [
-  { value: 'absent', label: 'Client absent' },
+  { value: 'absent',            label: 'Client absent' },
   { value: 'adresse_incorrecte', label: 'Adresse incorrecte' },
-  { value: 'colis_refuse', label: 'Colis refusé' },
-  { value: 'acces_impossible', label: 'Accès impossible' },
-  { value: 'autre', label: 'Autre' },
+  { value: 'colis_refuse',      label: 'Colis refusé' },
+  { value: 'acces_impossible',  label: 'Accès impossible' },
+  { value: 'autre',             label: 'Autre' },
 ]
 
 const STATUT_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  affectee:  { label: 'Affectée',   bg: 'bg-blue-100',   text: 'text-blue-700' },
-  en_cours:  { label: 'En cours',   bg: 'bg-amber-100',  text: 'text-amber-700' },
-  collectee: { label: 'Collectée',  bg: 'bg-green-100',  text: 'text-green-700' },
-  anomalie:  { label: 'Anomalie',   bg: 'bg-red-100',    text: 'text-red-700' },
+  affectee:  { label: 'Affectée',  bg: 'bg-blue-100',  text: 'text-blue-700' },
+  en_cours:  { label: 'En cours',  bg: 'bg-amber-100', text: 'text-amber-700' },
+  collectee: { label: 'Collectée', bg: 'bg-green-100', text: 'text-green-700' },
+  anomalie:  { label: 'Anomalie',  bg: 'bg-red-100',   text: 'text-red-700' },
 }
 
 interface Mission {
@@ -23,11 +24,13 @@ interface Mission {
   reference: string
   adresse_collecte_texte: string
   statut: string
+  type_variante: 'intra_ville' | 'inter_ville'
   nb_colis: number
   notes: string | null
 }
 
 export default function MissionCard({ mission }: { mission: Mission }) {
+  const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [showAnomalie, setShowAnomalie] = useState(false)
   const [typeAnomalie, setTypeAnomalie] = useState('absent')
@@ -35,7 +38,13 @@ export default function MissionCard({ mission }: { mission: Mission }) {
   const [error, setError] = useState('')
 
   const cfg = STATUT_CONFIG[mission.statut] ?? { label: mission.statut, bg: 'bg-gray-100', text: 'text-gray-700' }
-  const isTerminal = ['collectee', 'anomalie', 'annulee'].includes(mission.statut)
+
+  // collectee intra-ville : pas terminal (bouton "Livrer" à afficher)
+  const isLivrable = mission.statut === 'collectee' && mission.type_variante === 'intra_ville'
+  // inter-ville collectée ou anomalie : terminal côté collecteur
+  const isTerminal =
+    mission.statut === 'anomalie' ||
+    (mission.statut === 'collectee' && mission.type_variante === 'inter_ville')
 
   function run(action: () => Promise<{ error?: string }>) {
     setError('')
@@ -48,7 +57,7 @@ export default function MissionCard({ mission }: { mission: Mission }) {
   return (
     <div className={`bg-white rounded-xl border border-gray-100 p-4 flex flex-col gap-3 ${isPending ? 'opacity-60' : ''}`}>
 
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="font-mono text-xs text-gray-400">{mission.reference}</p>
@@ -62,8 +71,15 @@ export default function MissionCard({ mission }: { mission: Mission }) {
       {/* Meta */}
       <div className="flex items-center gap-3 text-xs text-gray-500">
         <span className="flex items-center gap-1">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
           {mission.nb_colis} colis
+        </span>
+        <span className={`text-xs px-1.5 py-0.5 rounded ${
+          mission.type_variante === 'intra_ville' ? 'bg-blue-50 text-blue-600' : 'bg-gray-100 text-gray-500'
+        }`}>
+          {mission.type_variante === 'intra_ville' ? 'Intra-ville' : 'Inter-ville'}
         </span>
         {mission.notes && (
           <span className="text-gray-400 truncate">{mission.notes}</span>
@@ -76,7 +92,7 @@ export default function MissionCard({ mission }: { mission: Mission }) {
       )}
 
       {/* Actions */}
-      {!isTerminal && (
+      {!isTerminal && !isLivrable && (
         <div className="flex flex-col gap-2">
           {mission.statut === 'affectee' && (
             <button
@@ -150,10 +166,23 @@ export default function MissionCard({ mission }: { mission: Mission }) {
         </div>
       )}
 
+      {/* Livraison (collectee intra-ville) — navigation vers l'écran de preuve */}
+      {isLivrable && (
+        <button
+          onClick={() => router.push(`/collecteur/livraison/${mission.id}`)}
+          className="w-full bg-[#E30613] text-white text-sm font-semibold py-2.5 rounded-xl active:opacity-80 flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          Livrer — Recueillir la preuve
+        </button>
+      )}
+
       {/* Terminal state */}
       {isTerminal && (
         <div className={`text-center text-xs py-1.5 rounded-lg font-medium ${cfg.bg} ${cfg.text}`}>
-          {mission.statut === 'collectee' ? '✓ Mission terminée' : '⚠ Anomalie déclarée'}
+          {mission.statut === 'collectee' ? '✓ Déposée au centre' : '⚠ Anomalie déclarée'}
         </div>
       )}
     </div>

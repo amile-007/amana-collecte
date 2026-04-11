@@ -106,6 +106,61 @@ export async function declarerAnomalie(
   }
 }
 
+export async function confirmerLivraison(
+  demandeId: string,
+  opts: { signatureRecueillie: boolean; photoUrl?: string }
+): Promise<{ error?: string }> {
+  try {
+    const { supabase, userId } = await getCollecteur()
+
+    const { data: demande } = await supabase
+      .from('demandes')
+      .select('statut, client_id, reference')
+      .eq('id', demandeId)
+      .eq('collecteur_id', userId)
+      .single()
+
+    if (!demande) return { error: 'Demande introuvable' }
+    if (demande.statut !== 'collectee') return { error: 'Statut invalide pour la livraison' }
+
+    await supabase
+      .from('demandes')
+      .update({ statut: 'livree' })
+      .eq('id', demandeId)
+      .eq('collecteur_id', userId)
+
+    const commentaire = [
+      'Livraison confirmée',
+      opts.signatureRecueillie ? '✓ Signature recueillie' : null,
+      opts.photoUrl ? '✓ Photo de preuve enregistrée' : null,
+    ]
+      .filter(Boolean)
+      .join(' — ')
+
+    await supabase.from('statuts_historique').insert({
+      demande_id: demandeId,
+      statut_avant: 'collectee',
+      statut_apres: 'livree',
+      acteur_id: userId,
+      acteur_role: 'collecteur',
+      commentaire,
+    })
+
+    await supabase.from('notifications').insert({
+      destinataire_id: demande.client_id,
+      type_evenement:  'livraison_confirmee',
+      titre:           'Colis livré !',
+      message:         `Votre demande ${demande.reference} a été livrée avec succès.`,
+      demande_id:      demandeId,
+    })
+
+    revalidatePath('/collecteur/missions')
+    return {}
+  } catch {
+    return { error: 'Erreur lors de la confirmation de livraison' }
+  }
+}
+
 export async function updateStatutCollecteur(
   statut: 'disponible' | 'en_mission' | 'indisponible'
 ): Promise<{ error?: string }> {
