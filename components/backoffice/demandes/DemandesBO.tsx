@@ -64,6 +64,10 @@ function AffectationModal({
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
 
+  const estReaffectation = demande.statut === 'affectee'
+  // Exclure le collecteur actuel de la liste (il est déjà affiché séparément)
+  const autresCollecteurs = collecteurs.filter((c) => c.id !== demande.collecteur_id)
+
   const handleConfirm = () => {
     if (!selected) return
     setError('')
@@ -86,7 +90,7 @@ function AffectationModal({
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <div>
             <p className="text-sm font-semibold text-gray-900">
-              {demande.statut === 'affectee' ? 'Réaffecter' : 'Affecter'} la demande
+              {estReaffectation ? `Modifier l'affectation` : 'Affecter la demande'}
             </p>
             <p className="text-xs text-gray-400 mt-0.5">{demande.reference}</p>
           </div>
@@ -100,13 +104,36 @@ function AffectationModal({
           </button>
         </div>
 
-        {/* Collecteurs list */}
-        <div className="px-6 py-4 max-h-72 overflow-y-auto">
-          {collecteurs.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">Aucun collecteur disponible</p>
+        {/* Collecteur actuel */}
+        {estReaffectation && demande.collecteur_nom && (
+          <div className="px-6 pt-4 pb-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Collecteur actuel</p>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-blue-50 border border-blue-200">
+              <div className="h-9 w-9 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
+                {demande.collecteur_nom.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">{demande.collecteur_nom}</p>
+              </div>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium shrink-0">
+                Actuel
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Collecteurs disponibles */}
+        <div className="px-6 py-4 max-h-64 overflow-y-auto">
+          {estReaffectation && (
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+              Choisir un autre collecteur
+            </p>
+          )}
+          {autresCollecteurs.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">Aucun autre collecteur disponible</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {collecteurs.map((c) => (
+              {autresCollecteurs.map((c) => (
                 <button
                   key={c.id}
                   onClick={() => setSelected(c.id)}
@@ -146,7 +173,7 @@ function AffectationModal({
             </button>
             <button
               onClick={handleConfirm}
-              disabled={!selected || isPending || collecteurs.length === 0}
+              disabled={!selected || isPending || autresCollecteurs.length === 0}
               className="flex-1 px-4 py-2.5 rounded-xl bg-[#CC0000] text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
               {isPending ? 'Affectation…' : 'Confirmer'}
@@ -355,7 +382,7 @@ export default function DemandesBO({
                                 : 'bg-[#CC0000] text-white hover:bg-red-700'
                             }`}
                           >
-                            {d.statut === 'affectee' ? 'Réaffecter' : 'Affecter'}
+                            {d.statut === 'affectee' ? `Modifier l'affectation` : 'Affecter'}
                           </button>
                         )}
                         <Link

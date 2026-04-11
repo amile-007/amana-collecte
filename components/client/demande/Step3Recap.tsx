@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition, useRef } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import type { ColisItemData } from './ColisFormItem'
 import type { Step1Data } from './Step1Adresse'
@@ -22,7 +22,17 @@ export default function Step3Recap({ step1, colis, onBack }: Step3Props) {
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<DemandeCreee | null>(null)
   const [error, setError] = useState('')
+  const [rechercheCollecteur, setRechercheCollecteur] = useState(false)
   const printRef = useRef<HTMLDivElement>(null)
+
+  // Affiche "Recherche du collecteur..." pendant 1s après réception du résultat
+  useEffect(() => {
+    if (result) {
+      setRechercheCollecteur(true)
+      const t = setTimeout(() => setRechercheCollecteur(false), 1000)
+      return () => clearTimeout(t)
+    }
+  }, [result])
 
   const colisCalculés = colis.map((c) => {
     const p = parseFloat(c.poids_declare) || 0
@@ -73,6 +83,22 @@ export default function Step3Recap({ step1, colis, onBack }: Step3Props) {
 
   const handlePrint = () => window.print()
 
+  // ─── Phase intermédiaire : Recherche du collecteur ───────────────────────
+  if (result && rechercheCollecteur) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
+        <div className="relative h-12 w-12">
+          <svg className="animate-spin h-12 w-12 text-[#CC0000]" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+        </div>
+        <p className="text-sm font-semibold text-gray-800">Recherche du collecteur le plus proche…</p>
+        <p className="text-xs text-gray-400">{result.reference}</p>
+      </div>
+    )
+  }
+
   // ─── Écran de confirmation avec QR codes ─────────────────────────────────
   if (result) {
     return (
@@ -87,7 +113,18 @@ export default function Step3Recap({ step1, colis, onBack }: Step3Props) {
           <div>
             <p className="text-sm font-semibold text-green-800">Demande créée avec succès !</p>
             <p className="text-xs text-green-600 mt-0.5">Référence : <strong>{result.reference}</strong></p>
-            <p className="text-xs text-green-600">Un collecteur sera affecté prochainement.</p>
+            {result.collecteurNom ? (
+              <p className="text-xs text-green-700 font-medium mt-1 flex items-center gap-1">
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                Collecteur assigné : <strong>{result.collecteurNom}</strong>
+              </p>
+            ) : (
+              <p className="text-xs text-orange-600 mt-1">
+                Aucun collecteur disponible pour le moment — vous serez notifié dès qu&apos;un collecteur sera assigné.
+              </p>
+            )}
           </div>
         </div>
 

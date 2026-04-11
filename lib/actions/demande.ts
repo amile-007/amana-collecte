@@ -32,6 +32,88 @@ export interface DemandeCreee {
   demandeId: string
   reference: string
   colisCreés: { reference: string; destinataire_nom: string; destination_ville: string }[]
+  collecteurNom: string | null  // null si aucun collecteur disponible
+}
+
+/**
+ * Affecte automatiquement la demande au collecteur disponible
+ * le plus proche (distance euclidienne lat/lng).
+ * Retourne le nom du collecteur affecté, ou null si aucun disponible.
+ */
+async function affectationAutomatique(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  opts: {
+    demandeId:  string
+    centreId:   string | null
+    adresseLat: number | null
+    adresseLng: number | null
+    clientId:   string
+    reference:  string
+  }
+): Promise<string | null> {
+  if (!opts.centreId) return null
+
+  const { data: collecteurs } = await supabase
+    .from('collecteurs')
+    .select('id, position_lat, position_lng')
+    .eq('centre_id', opts.centreId)
+    .eq('statut', 'disponible')
+
+  if (!collecteurs || collecteurs.length === 0) return null
+
+  // Collecteur le plus proche — formule euclidienne (même ville, pas besoin de géodésie)
+  let choisi = collecteurs[0]
+  if (opts.adresseLat !== null && opts.adresseLng !== null) {
+    const avecGPS = collecteurs.filter((c) => c.position_lat !== null && c.position_lng !== null)
+    if (avecGPS.length > 0) {
+      let minDist = Infinity
+      for (const c of avecGPS) {
+        const dist = Math.sqrt(
+          Math.pow((c.position_lat as number) - opts.adresseLat!, 2) +
+          Math.pow((c.position_lng as number) - opts.adresseLng!, 2)
+        )
+        if (dist < minDist) { minDist = dist; choisi = c }
+      }
+    }
+  }
+
+  await supabase.from('demandes').update({
+    collecteur_id: choisi.id,
+    statut: 'affectee',
+  }).eq('id', opts.demandeId)
+
+  await supabase.from('statuts_historique').insert({
+    demande_id:   opts.demandeId,
+    statut_avant: 'en_attente',
+    statut_apres: 'affectee',
+    acteur_id:    null,
+    acteur_role:  'systeme',
+    commentaire:  'Affectation automatique — collecteur le plus proche',
+  })
+
+  await supabase.from('notifications').insert({
+    destinataire_id: choisi.id,
+    type_evenement:  'demande_affectee',
+    titre:           'Nouvelle mission affectée',
+    message:         `La demande ${opts.reference} vous a été affectée automatiquement.`,
+    demande_id:      opts.demandeId,
+  })
+
+  await supabase.from('notifications').insert({
+    destinataire_id: opts.clientId,
+    type_evenement:  'demande_affectee',
+    titre:           'Collecteur assigné',
+    message:         `Un collecteur a été assigné à votre demande ${opts.reference}.`,
+    demande_id:      opts.demandeId,
+  })
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('prenom, nom')
+    .eq('id', choisi.id)
+    .single()
+
+  return profile ? `${profile.prenom} ${profile.nom}` : null
 }
 
 /** Génère une référence au format AMD-YYYYMMDD-XXXX */
@@ -118,10 +200,21 @@ export async function createDemande(payload: DemandePayload): Promise<DemandeCre
 
   if (errColis) throw new Error(errColis.message)
 
+  // Affectation automatique au collecteur le plus proche
+  const collecteurNom = await affectationAutomatique(supabase, {
+    demandeId:  demande.id,
+    centreId:   centre?.id ?? null,
+    adresseLat: payload.adresse_collecte_lat,
+    adresseLng: payload.adresse_collecte_lng,
+    clientId:   user.id,
+    reference,
+  })
+
   return {
     demandeId: demande.id,
     reference,
     colisCreés: colisInsérés ?? [],
+    collecteurNom,
   }
 }
 

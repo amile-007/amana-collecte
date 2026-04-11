@@ -90,6 +90,69 @@ export async function affecterCollecteur(
   return { error: null }
 }
 
+// ─── Réaffectation (chef de centre) ──────────────────────────────────────────
+
+export async function reassignerDemande(
+  supabase: SupabaseClient,
+  opts: {
+    demandeId:           string
+    nouveauCollecteurId: string
+    acteurId:            string
+    acteurRole:          string
+  }
+) {
+  const { data: demande } = await supabase
+    .from('demandes')
+    .select('collecteur_id, reference, client_id')
+    .eq('id', opts.demandeId)
+    .single()
+
+  if (!demande) return { error: 'Demande introuvable' }
+
+  const ancienCollecteurId = demande.collecteur_id as string | null
+
+  const { error } = await supabase.from('demandes').update({
+    collecteur_id: opts.nouveauCollecteurId,
+    statut:        'affectee',
+    updated_at:    new Date().toISOString(),
+  }).eq('id', opts.demandeId)
+
+  if (error) return { error: error.message }
+
+  await supabase.from('statuts_historique').insert({
+    demande_id:   opts.demandeId,
+    statut_avant: 'affectee',
+    statut_apres: 'affectee',
+    acteur_id:    opts.acteurId,
+    acteur_role:  opts.acteurRole,
+    commentaire:  'Réaffectée par le chef de centre',
+  })
+
+  // Notif ancien collecteur (s'il existe et est différent)
+  if (ancienCollecteurId && ancienCollecteurId !== opts.nouveauCollecteurId) {
+    await supabase.from('notifications').insert({
+      destinataire_id: ancienCollecteurId,
+      type_evenement:  'demande_reaffectee',
+      titre:           'Mission réaffectée',
+      message:         `La demande ${demande.reference} vous a été retirée.`,
+      demande_id:      opts.demandeId,
+    })
+  }
+
+  // Notif nouveau collecteur
+  await supabase.from('notifications').insert({
+    destinataire_id: opts.nouveauCollecteurId,
+    type_evenement:  'demande_affectee',
+    titre:           'Nouvelle mission assignée',
+    message:         `La demande ${demande.reference} vous a été assignée.`,
+    demande_id:      opts.demandeId,
+  })
+
+  revalidatePath('/backoffice/demandes')
+  revalidatePath('/collecteur/missions')
+  return { error: null }
+}
+
 // ─── Position GPS ─────────────────────────────────────────────────────────────
 
 export async function updatePosition(

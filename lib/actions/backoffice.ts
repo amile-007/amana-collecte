@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { reassignerDemande } from '@/lib/db/mutations'
 
 async function getChef() {
   const supabase = await createClient()
@@ -32,42 +33,46 @@ export async function affecterDemande(
     if (!demande) return { error: 'Demande introuvable' }
     if (!['en_attente', 'affectee'].includes(demande.statut)) return { error: 'Demande non affectable' }
 
-    const statutAvant = demande.statut
+    if (demande.statut === 'affectee') {
+      // Réaffectation — notifie l'ancien ET le nouveau collecteur
+      const result = await reassignerDemande(supabase, {
+        demandeId,
+        nouveauCollecteurId: collecteurId,
+        acteurId:            userId,
+        acteurRole:          'chef_centre',
+      })
+      if (result.error) return { error: result.error }
+    } else {
+      // Première affectation manuelle (rare : auto-affectation a échoué)
+      await supabase.from('demandes').update({
+        statut:        'affectee',
+        collecteur_id: collecteurId,
+        centre_id:     centreId,
+      }).eq('id', demandeId)
 
-    await supabase.from('demandes').update({
-      statut: 'affectee',
-      collecteur_id: collecteurId,
-      centre_id: centreId,
-    }).eq('id', demandeId)
+      await supabase.from('statuts_historique').insert({
+        demande_id:   demandeId,
+        statut_avant: 'en_attente',
+        statut_apres: 'affectee',
+        acteur_id:    userId,
+        acteur_role:  'chef_centre',
+        commentaire:  'Affectée manuellement par le chef de centre',
+      })
 
-    await supabase.from('statuts_historique').insert({
-      demande_id: demandeId,
-      statut_avant: statutAvant,
-      statut_apres: 'affectee',
-      acteur_id: userId,
-      acteur_role: 'chef_centre',
-      commentaire: statutAvant === 'affectee'
-        ? 'Réaffectée par le chef de centre'
-        : 'Affectée par le chef de centre',
-    })
+      await supabase.from('notifications').insert({
+        destinataire_id: collecteurId,
+        type_evenement:  'demande_affectee',
+        titre:           'Nouvelle mission affectée',
+        message:         `La demande ${demande.reference} vous a été affectée.`,
+        demande_id:      demandeId,
+      })
 
-    // Notif collecteur
-    await supabase.from('notifications').insert({
-      destinataire_id: collecteurId,
-      type_evenement: 'demande_affectee',
-      titre: 'Nouvelle mission affectée',
-      message: `La demande ${demande.reference} vous a été affectée.`,
-      demande_id: demandeId,
-    })
-
-    // Notif client (première affectation uniquement)
-    if (statutAvant === 'en_attente') {
       await supabase.from('notifications').insert({
         destinataire_id: demande.client_id,
-        type_evenement: 'demande_affectee',
-        titre: 'Demande prise en charge',
-        message: `Votre demande ${demande.reference} a été affectée à un collecteur.`,
-        demande_id: demandeId,
+        type_evenement:  'demande_affectee',
+        titre:           'Demande prise en charge',
+        message:         `Votre demande ${demande.reference} a été affectée à un collecteur.`,
+        demande_id:      demandeId,
       })
     }
 
