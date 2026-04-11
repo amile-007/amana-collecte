@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 
-const PUBLIC_PATHS = ['/login', '/register', '/verify', '/forgot-password']
+const PUBLIC_PATHS = ['/login', '/register', '/verify', '/forgot-password', '/suivi']
 const PERF_THRESHOLD_MS = 3000
 
 export async function proxy(request: NextRequest) {
