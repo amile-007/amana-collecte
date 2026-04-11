@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { affecterDemande } from '@/lib/actions/backoffice'
 import type { StatutDemande, CollecteurAvecProfil } from '@/lib/types'
 
@@ -316,7 +317,9 @@ export default function DemandesBO({
                 {filtered.map((d) => (
                   <tr key={d.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
-                      <p className="font-mono text-xs font-semibold text-gray-900">{d.reference}</p>
+                      <Link href={`/backoffice/demandes/${d.id}`} className="hover:underline">
+                        <p className="font-mono text-xs font-semibold text-[#CC0000]">{d.reference}</p>
+                      </Link>
                       <p className="text-[10px] text-gray-400 mt-0.5">{d.type_variante === 'intra_ville' ? 'Intra-ville' : 'Inter-ville'}</p>
                     </td>
                     <td className="px-4 py-3">
@@ -342,18 +345,26 @@ export default function DemandesBO({
                       </p>
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {(d.statut === 'en_attente' || d.statut === 'affectee') && (
-                        <button
-                          onClick={() => setModal(d)}
-                          className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
-                            d.statut === 'affectee'
-                              ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                              : 'bg-[#CC0000] text-white hover:bg-red-700'
-                          }`}
+                      <div className="flex items-center justify-end gap-2">
+                        {(d.statut === 'en_attente' || d.statut === 'affectee') && (
+                          <button
+                            onClick={() => setModal(d)}
+                            className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                              d.statut === 'affectee'
+                                ? 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+                                : 'bg-[#CC0000] text-white hover:bg-red-700'
+                            }`}
+                          >
+                            {d.statut === 'affectee' ? 'Réaffecter' : 'Affecter'}
+                          </button>
+                        )}
+                        <Link
+                          href={`/backoffice/demandes/${d.id}`}
+                          className="text-xs px-3 py-1.5 rounded-lg font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                         >
-                          {d.statut === 'affectee' ? 'Réaffecter' : 'Affecter'}
-                        </button>
-                      )}
+                          Voir
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}

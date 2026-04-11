@@ -6,6 +6,7 @@ import TimelineStatuts from '@/components/client/demandes/TimelineStatuts'
 import ColisQRCard from '@/components/client/demandes/ColisQRCard'
 import SuiviGPS from '@/components/client/demandes/SuiviGPS'
 import AnnulerDemandeButton from '@/components/client/demandes/AnnulerDemandeButton'
+import PreuveLivraison from '@/components/shared/PreuveLivraison'
 import type { StatutDemande, Colis, StatutHistorique } from '@/lib/types'
 
 interface PageProps {
@@ -41,7 +42,7 @@ export default async function DetailDemandePage({ params }: PageProps) {
     .eq('demande_id', id)
     .order('created_at', { ascending: false })
 
-  // Position GPS collecteur (si demande affectée et intra-ville collectée)
+  // Position GPS collecteur (intra-ville collectée)
   let collecteurPosition = null
   if (demande.collecteur_id && demande.type_variante === 'intra_ville' && demande.statut === 'collectee') {
     const { data: col } = await supabase
@@ -52,8 +53,37 @@ export default async function DetailDemandePage({ params }: PageProps) {
     collecteurPosition = col
   }
 
+  // Profil collecteur (pour la preuve de livraison)
+  let collecteurNom = ''
+  if (demande.collecteur_id) {
+    const { data: cp } = await supabase
+      .from('profiles')
+      .select('prenom, nom')
+      .eq('id', demande.collecteur_id)
+      .single()
+    if (cp) collecteurNom = `${cp.prenom} ${cp.nom}`
+  }
+
   const statut = demande.statut as StatutDemande
   const showGPS = demande.type_variante === 'intra_ville' && statut === 'collectee'
+
+  // Preuve de livraison (depuis statuts_historique)
+  let preuveLivraison: { signatureBase64: string | null; photoBase64: string | null; date: string } | null = null
+  if (statut === 'livree' && historique) {
+    const entryLivree = (historique as StatutHistorique[]).find((h) => h.statut_apres === 'livree')
+    if (entryLivree?.commentaire) {
+      try {
+        const parsed = JSON.parse(entryLivree.commentaire)
+        if (parsed?.type === 'livraison_confirmee') {
+          preuveLivraison = {
+            signatureBase64: parsed.signatureBase64 ?? null,
+            photoBase64: parsed.photoBase64 ?? null,
+            date: entryLivree.created_at,
+          }
+        }
+      } catch { /* commentaire plain text, pas de preuve */ }
+    }
+  }
 
   const dateFormatée = new Date(demande.created_at).toLocaleString('fr-MA', {
     day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -131,6 +161,26 @@ export default async function DetailDemandePage({ params }: PageProps) {
           ))}
         </div>
       </section>
+
+      {/* Preuve de livraison */}
+      {preuveLivraison && (
+        <section className="bg-white border border-green-200 rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+              <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </span>
+            <h2 className="text-xs font-semibold text-green-700 uppercase tracking-wide">Preuve de livraison</h2>
+          </div>
+          <PreuveLivraison
+            signatureBase64={preuveLivraison.signatureBase64}
+            photoBase64={preuveLivraison.photoBase64}
+            dateLivraison={preuveLivraison.date}
+            collecteurNom={collecteurNom}
+          />
+        </section>
+      )}
 
       {/* Timeline */}
       <section className="bg-white border border-gray-200 rounded-xl p-5">

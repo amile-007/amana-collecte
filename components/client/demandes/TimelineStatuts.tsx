@@ -42,9 +42,16 @@ export default function TimelineStatuts({ historique }: { historique: StatutHist
               )}
             </div>
             <span className="text-xs text-gray-400">{formatDate(entry.created_at)}</span>
-            {entry.commentaire && (
-              <p className="text-xs text-gray-600 mt-1 italic">{entry.commentaire}</p>
-            )}
+            {entry.commentaire && (() => {
+              // Si le commentaire est un JSON de preuve de livraison, afficher le texte lisible
+              try {
+                const parsed = JSON.parse(entry.commentaire)
+                if (parsed?.type === 'livraison_confirmee') {
+                  return <p className="text-xs text-green-600 mt-1 font-medium">✓ Signature + Photo enregistrées</p>
+                }
+              } catch { /* commentaire plain text */ }
+              return <p className="text-xs text-gray-600 mt-1 italic">{entry.commentaire}</p>
+            })()}
           </div>
         </li>
       ))}

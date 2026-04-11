@@ -108,7 +108,7 @@ export async function declarerAnomalie(
 
 export async function confirmerLivraison(
   demandeId: string,
-  opts: { signatureRecueillie: boolean; photoUrl?: string }
+  opts: { signatureBase64?: string; photoBase64?: string }
 ): Promise<{ error?: string }> {
   try {
     const { supabase, userId } = await getCollecteur()
@@ -129,13 +129,13 @@ export async function confirmerLivraison(
       .eq('id', demandeId)
       .eq('collecteur_id', userId)
 
-    const commentaire = [
-      'Livraison confirmée',
-      opts.signatureRecueillie ? '✓ Signature recueillie' : null,
-      opts.photoUrl ? '✓ Photo de preuve enregistrée' : null,
-    ]
-      .filter(Boolean)
-      .join(' — ')
+    // Stocker signature et photo en JSON dans le commentaire
+    const commentaire = JSON.stringify({
+      type: 'livraison_confirmee',
+      signatureBase64: opts.signatureBase64 ?? null,
+      photoBase64: opts.photoBase64 ?? null,
+      texte: 'Livraison confirmée — Signature + Photo',
+    })
 
     await supabase.from('statuts_historique').insert({
       demande_id: demandeId,

@@ -112,6 +112,24 @@ export default function LivraisonForm({
     reader.readAsDataURL(file)
   }
 
+  // ─── Compression photo (max 800px, JPEG 0.75) ─────────────────────────────
+  const compresserPhoto = (file: File): Promise<string> =>
+    new Promise((resolve) => {
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      img.onload = () => {
+        const maxW = 800
+        const scale = Math.min(1, maxW / img.width)
+        const cv = document.createElement('canvas')
+        cv.width = Math.round(img.width * scale)
+        cv.height = Math.round(img.height * scale)
+        cv.getContext('2d')?.drawImage(img, 0, 0, cv.width, cv.height)
+        URL.revokeObjectURL(url)
+        resolve(cv.toDataURL('image/jpeg', 0.75))
+      }
+      img.src = url
+    })
+
   // ─── Confirmation ─────────────────────────────────────────────────────────
   const peutConfirmer = signatureFaite && photoPreview !== null
 
@@ -119,10 +137,9 @@ export default function LivraisonForm({
     if (!peutConfirmer) return
     setError('')
     startTransition(async () => {
-      const result = await confirmerLivraison(demandeId, {
-        signatureRecueillie: true,
-        photoUrl: photoFile?.name ?? 'preuve-photo',
-      })
+      const signatureBase64 = canvasRef.current?.toDataURL('image/png')
+      const photoBase64 = photoFile ? await compresserPhoto(photoFile) : undefined
+      const result = await confirmerLivraison(demandeId, { signatureBase64, photoBase64 })
       if (result.error) {
         setError(result.error)
       } else {
