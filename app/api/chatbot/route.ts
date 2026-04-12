@@ -173,7 +173,8 @@ export async function POST(request: NextRequest) {
   const text = message.trim()
 
   // ── 1. Référence AMD détectée → lookup Supabase ───────────────────────────
-  const refMatch = text.match(/AMD-\d{8}-\d{4}/i)
+  // Supporte AMD-YYYYMMDD-XXXX (prod) et AMD-DEMO-XXXX (démo)
+  const refMatch = text.match(/AMD-[A-Z0-9]+-[A-Z0-9]+/i)
   if (refMatch) {
     const response = await lookupDemande(refMatch[0])
     return NextResponse.json(response)
