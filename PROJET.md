@@ -423,7 +423,9 @@ Rabat → Rabat           : 0-5kg = 30 MAD | 5-15kg = 50 MAD | 15-30kg = 80 MAD
 | Module 5 — Administration | ✅ Terminé | 2026-04-11 | Dashboard KPIs, barèmes tarifaires, utilisateurs, journal audit |
 | Données de démo | ✅ Terminé | 2026-04-09 | AMD-DEMO-0001 opérationnel — seed-demo.sql validé |
 | Déploiement Vercel | ✅ Terminé | 2026-04-11 | https://amana-collecte.vercel.app opérationnel |
-| Tests scénario démo | 🔄 À faire | 2026-04-11 | |
+| PWA (manifest + service worker) | ✅ Terminé | 2026-04-12 | @ducanh2912/next-pwa, page offline, manifest.json |
+| Chatbot rule-based | ✅ Terminé | 2026-04-12 | Détection mots-clés, lookup Supabase, 0 coût |
+| Tests scénario démo | ✅ Terminé | 2026-04-12 | Pages publiques, auth, chatbot, PWA — tout vert |
 
 **Légende :** ⬜ À faire | 🔄 En cours | ✅ Terminé | ❌ Bloqué
 
