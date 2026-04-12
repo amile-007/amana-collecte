@@ -154,6 +154,16 @@ export default async function SuiviReferencePage({ params }: PageProps) {
             </span>
           </div>
 
+          {/* Info retournée */}
+          {demande.statut === 'retournee' && (
+            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <p className="text-xs font-semibold text-yellow-700">↩️ Colis retourné à l&apos;expéditeur</p>
+              <p className="text-xs text-yellow-600 mt-0.5">
+                Ce colis n&apos;a pas pu être livré et a été retourné à son expéditeur.
+              </p>
+            </div>
+          )}
+
           {/* Info livraison */}
           {demande.statut === 'livree' && entryLivree && (
             <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">

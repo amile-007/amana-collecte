@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import ChatBot from './ChatBot'
 import type { Profile } from '@/lib/types'
 
 interface Props {
@@ -45,6 +46,8 @@ export default function LayoutShell({ profile, unreadCount, userId, children }: 
           {children}
         </main>
       </div>
+
+      <ChatBot />
     </div>
   )
 }
