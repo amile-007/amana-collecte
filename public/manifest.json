@@ -1,0 +1,37 @@
+{
+  "name": "AMANA Collecte",
+  "short_name": "AMANA",
+  "description": "Application de collecte de colis BARID AL MAGHRIB",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#E30613",
+  "orientation": "portrait",
+  "categories": ["logistics", "productivity"],
+  "icons": [
+    {
+      "src": "/images/amana-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/amana-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nouvelle demande",
+      "url": "/nouvelle-demande",
+      "description": "Créer une nouvelle demande de collecte"
+    },
+    {
+      "name": "Mes demandes",
+      "url": "/mes-demandes",
+      "description": "Voir l'historique de vos demandes"
+    }
+  ]
+}
