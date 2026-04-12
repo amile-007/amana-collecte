@@ -3,148 +3,215 @@ import { NextRequest, NextResponse } from 'next/server'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
+interface ChatRequest {
+  message: string
 }
 
-interface RequestBody {
-  messages: ChatMessage[]
-  demandeRef?: string
+export interface ChatResponse {
+  text: string
+  action?: {
+    label: string
+    href: string
+  }
 }
 
-// ─── Prompt système AMANA ─────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const BASE_SYSTEM_PROMPT = `Tu es l'assistant virtuel d'AMANA Collecte, le service de collecte de colis de BARID AL MAGHRIB (La Poste Maroc).
+/** Normalise : minuscules + suppression des accents pour la comparaison */
+function normalize(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+}
 
-Ton rôle :
-- Aider les clients à suivre leurs colis, comprendre les statuts, et utiliser la plateforme.
-- Répondre aux questions sur les tarifs, les délais, et les procédures.
-- Guider les clients pour créer une demande de collecte.
-- Orienter vers le service client humain pour les cas complexes.
+function matches(text: string, keywords: string[]): boolean {
+  const n = normalize(text)
+  return keywords.some((k) => n.includes(normalize(k)))
+}
 
-Ce que tu sais sur AMANA Collecte :
-- Service de collecte de colis à domicile au Maroc (Casablanca, Rabat et autres villes).
-- Deux variantes : intra-ville (collecte + livraison directe le même jour) et inter-ville (collecte → centre BARID AL MAGHRIB → livraison réseau national).
-- Tarifs indicatifs intra-ville Casablanca : 30 MAD (0-5 kg), 50 MAD (5-15 kg), 80 MAD (15-30 kg).
-- Tarifs indicatifs inter-ville Casablanca → Rabat : 45 MAD (0-5 kg), 70 MAD (5-15 kg), 110 MAD (15-30 kg).
-- Délai intra-ville : même journée ou J+1.
-- Délai inter-ville : 2 à 5 jours ouvrés selon la destination.
-- Statuts possibles : En attente → Collecteur assigné → En cours de collecte → Collectée → En transit / Livrée / Déposée au centre.
-- Si un colis est "En instance" : le destinataire doit le retirer à l'agence sous 7 jours.
-- Preuve de livraison : signature électronique + photo prise par le collecteur.
-- Pour toute réclamation : contacter le service client au +212 537 00 00 00.
+// ─── Labels statuts ───────────────────────────────────────────────────────────
 
-Références de demande : format AMD-YYYYMMDD-XXXX (exemple : AMD-20260412-0042).
+const STATUT_LABELS: Record<string, string> = {
+  en_attente:     'En attente de collecte ⏳',
+  affectee:       'Collecteur assigné 👤',
+  en_cours:       'Collecte en cours 🚗',
+  collectee:      'Collecté 📦',
+  en_transit:     'En transit 🚚',
+  livree:         'Livré ✅',
+  deposee_centre: 'Déposé au centre 🏢',
+  en_instance:    'En instance — à retirer à l\'agence ⚠️',
+  retournee:      'Retourné à l\'expéditeur ↩️',
+  anomalie:       'Anomalie signalée 🔴',
+  annulee:        'Annulé ❌',
+}
 
-Règles de conduite :
-- Réponds uniquement en français.
-- Sois concis, professionnel et chaleureux.
-- Ne divulgue jamais d'informations personnelles sur d'autres clients.
-- Si tu ne sais pas, dis-le clairement et oriente vers le service client.
-- Pour les questions hors périmètre AMANA, redirige poliment vers le sujet principal.
-`
+// ─── Réponses prédéfinies ─────────────────────────────────────────────────────
+
+const REPONSE_TARIFS: ChatResponse = {
+  text:
+    'Voici le barème tarifaire AMANA :\n\n' +
+    '📦 Casablanca → Casablanca\n' +
+    '  • 0 – 5 kg : 30 MAD\n' +
+    '  • 5 – 15 kg : 50 MAD\n' +
+    '  • 15 – 30 kg : 80 MAD\n\n' +
+    '🚚 Casablanca ↔ Rabat\n' +
+    '  • 0 – 5 kg : 45 MAD\n' +
+    '  • 5 – 15 kg : 70 MAD\n' +
+    '  • 15 – 30 kg : 110 MAD\n\n' +
+    'Le tarif est calculé sur le poids réel ou volumétrique (le plus élevé des deux).',
+}
+
+const REPONSE_DELAIS: ChatResponse = {
+  text:
+    'Délais de livraison AMANA :\n\n' +
+    '🏙️ Intra-ville : collecte et livraison le même jour (J ou J+1 selon l\'heure de la demande)\n\n' +
+    '🛣️ Inter-ville : 24 à 48 h ouvrés pour les axes principaux Casablanca / Rabat\n\n' +
+    'Une fois votre colis collecté, vous pouvez suivre sa progression en temps réel.',
+}
+
+const REPONSE_CREER: ChatResponse = {
+  text: 'Pour créer une nouvelle demande de collecte, accédez à la page dédiée. Vous pouvez y saisir votre adresse de collecte sur carte, ajouter vos colis et obtenir le tarif immédiatement.',
+  action: { label: 'Créer une demande', href: '/nouvelle-demande' },
+}
+
+const REPONSE_ANOMALIE: ChatResponse = {
+  text:
+    'Je suis désolé d\'apprendre que vous rencontrez un problème. Voici comment procéder :\n\n' +
+    '1. Si votre colis est en cours de collecte, le collecteur peut déclarer une anomalie avec photo directement depuis son application.\n' +
+    '2. Pour toute réclamation, contactez notre service client :\n' +
+    '   📞 +212 537 00 00 00\n' +
+    '   🕐 Lun – Ven, 8h – 17h\n\n' +
+    'Munissez-vous de votre référence de demande (format AMD-YYYYMMDD-XXXX).',
+}
+
+const REPONSE_BONJOUR: ChatResponse = {
+  text: 'Bonjour ! Je suis l\'assistant AMANA Collecte. Je peux vous aider à :\n\n• Suivre un colis (donnez-moi votre référence AMD-…)\n• Consulter les tarifs\n• Connaître les délais de livraison\n• Créer une nouvelle demande\n• Signaler un problème\n\nQue puis-je faire pour vous ?',
+}
+
+const REPONSE_DEFAULT: ChatResponse = {
+  text: 'Je n\'ai pas bien compris votre demande. Voici ce que je sais faire :\n\n• 📦 Suivre un colis → donnez-moi votre référence AMD-…\n• 💰 Tarifs → demandez "quels sont les tarifs ?"\n• ⏱️ Délais → demandez "quels sont les délais ?"\n• ➕ Nouvelle demande → demandez "créer une demande"\n• ⚠️ Problème → demandez "signaler une anomalie"\n\nComment puis-je vous aider ?',
+}
+
+// ─── Lookup Supabase ──────────────────────────────────────────────────────────
+
+async function lookupDemande(reference: string): Promise<ChatResponse> {
+  try {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { data: demande } = await supabase
+      .from('demandes')
+      .select('id, reference, statut, type_variante, updated_at')
+      .eq('reference', reference.toUpperCase())
+      .single()
+
+    if (!demande) {
+      return {
+        text: `Aucune demande trouvée pour la référence ${reference.toUpperCase()}.\n\nVérifiez le format : AMD-YYYYMMDD-XXXX (exemple : AMD-20260412-0001).`,
+      }
+    }
+
+    const { data: colis } = await supabase
+      .from('colis')
+      .select('destination_ville')
+      .eq('demande_id', demande.id)
+
+    const villes = [...new Set((colis ?? []).map((c: { destination_ville: string }) => c.destination_ville).filter(Boolean))]
+    const statutLabel = STATUT_LABELS[demande.statut] ?? demande.statut
+    const typeLabel = demande.type_variante === 'intra_ville' ? 'Intra-ville' : 'Inter-ville'
+    const dateMAJ = new Date(demande.updated_at).toLocaleString('fr-MA', {
+      day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+    })
+
+    let text =
+      `Voici le statut de votre demande :\n\n` +
+      `📋 Référence : ${demande.reference}\n` +
+      `📌 Statut : ${statutLabel}\n` +
+      `🔄 Type : ${typeLabel}\n`
+
+    if (villes.length) text += `📍 Destination : ${villes.join(', ')}\n`
+    text += `🕐 Mise à jour : ${dateMAJ}`
+
+    if (demande.statut === 'en_instance') {
+      text += `\n\n⚠️ Votre colis est en instance. Merci de le retirer à l'agence sous 7 jours.`
+    } else if (demande.statut === 'livree') {
+      text += `\n\n✅ Votre colis a été livré avec succès.`
+    } else if (demande.statut === 'retournee') {
+      text += `\n\n↩️ Ce colis a été retourné à l'expéditeur.`
+    }
+
+    return {
+      text,
+      action: { label: 'Voir le détail complet', href: `/suivi/${demande.reference}` },
+    }
+  } catch {
+    return {
+      text: 'Impossible de récupérer les informations pour le moment. Veuillez réessayer ou consulter la page de suivi directement.',
+      action: { label: 'Page de suivi', href: '/suivi' },
+    }
+  }
+}
 
 // ─── Route POST ───────────────────────────────────────────────────────────────
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'Service indisponible.' }, { status: 503 })
-  }
-
-  let body: RequestBody
+  let body: ChatRequest
   try {
     body = await request.json()
   } catch {
-    return NextResponse.json({ error: 'Corps de requête invalide.' }, { status: 400 })
+    return NextResponse.json({ error: 'Corps invalide.' }, { status: 400 })
   }
 
-  const { messages, demandeRef } = body
-
-  if (!Array.isArray(messages) || messages.length === 0) {
-    return NextResponse.json({ error: 'Messages requis.' }, { status: 400 })
+  const { message } = body
+  if (!message?.trim()) {
+    return NextResponse.json({ error: 'Message vide.' }, { status: 400 })
   }
 
-  // ── Enrichissement contextuel si référence fournie ────────────────────────
-  let contextSupplementaire = ''
+  const text = message.trim()
 
-  if (demandeRef && /^AMD-\d{8}-\d{4}$/i.test(demandeRef)) {
-    try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      )
-
-      const { data: demande } = await supabase
-        .from('demandes')
-        .select('reference, statut, type_variante, created_at, updated_at')
-        .eq('reference', demandeRef.toUpperCase())
-        .single()
-
-      if (demande) {
-        const { data: colis } = await supabase
-          .from('colis')
-          .select('destination_ville, statut')
-          .eq('demande_id', (
-            await supabase
-              .from('demandes')
-              .select('id')
-              .eq('reference', demandeRef.toUpperCase())
-              .single()
-          ).data?.id)
-
-        const villes = [...new Set((colis ?? []).map((c: { destination_ville: string }) => c.destination_ville).filter(Boolean))]
-
-        contextSupplementaire = `
-
---- Contexte colis détecté ---
-Référence : ${demande.reference}
-Statut actuel : ${demande.statut}
-Type : ${demande.type_variante === 'intra_ville' ? 'Intra-ville' : 'Inter-ville'}
-Destination(s) : ${villes.length ? villes.join(', ') : 'non renseignée'}
-Créé le : ${new Date(demande.created_at).toLocaleDateString('fr-MA')}
-Dernière mise à jour : ${new Date(demande.updated_at).toLocaleDateString('fr-MA')}
---- Fin contexte ---
-
-Utilise ces informations pour répondre aux questions du client sur ce colis.`
-      }
-    } catch {
-      // Contexte Supabase non critique — on continue sans
-    }
+  // ── 1. Référence AMD détectée → lookup Supabase ───────────────────────────
+  const refMatch = text.match(/AMD-\d{8}-\d{4}/i)
+  if (refMatch) {
+    const response = await lookupDemande(refMatch[0])
+    return NextResponse.json(response)
   }
 
-  const systemPrompt = BASE_SYSTEM_PROMPT + contextSupplementaire
-
-  // ── Appel Anthropic en streaming ──────────────────────────────────────────
-  const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      stream: true,
-      system: systemPrompt,
-      messages: messages.slice(-10), // Limite l'historique aux 10 derniers messages
-    }),
-  })
-
-  if (!anthropicResponse.ok) {
-    const err = await anthropicResponse.text()
-    console.error('Anthropic API error:', err)
-    return NextResponse.json({ error: 'Erreur lors de la génération de la réponse.' }, { status: 502 })
+  // ── 2. Suivi / localisation ───────────────────────────────────────────────
+  if (matches(text, ['suivre', 'où est', 'ou est', 'suivi', 'localiser', 'statut', 'où en est', 'ou en est', 'tracker', 'tracking'])) {
+    return NextResponse.json({
+      text: 'Pour suivre votre colis, communiquez-moi votre référence de demande.\n\nElle est au format AMD-YYYYMMDD-XXXX et figure sur votre e-mail de confirmation ou dans votre espace client.',
+      action: { label: 'Page de suivi public', href: '/suivi' },
+    } satisfies ChatResponse)
   }
 
-  // Proxy direct du stream SSE Anthropic vers le client
-  return new Response(anthropicResponse.body, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'X-Accel-Buffering': 'no',
-    },
-  })
+  // ── 3. Tarifs ─────────────────────────────────────────────────────────────
+  if (matches(text, ['tarif', 'prix', 'combien', 'cout', 'coût', 'montant', 'payer', 'paiement', 'facturation', 'bareme', 'barème'])) {
+    return NextResponse.json(REPONSE_TARIFS)
+  }
+
+  // ── 4. Délais ─────────────────────────────────────────────────────────────
+  if (matches(text, ['délai', 'delai', 'quand', 'durée', 'duree', 'temps', 'rapide', 'vite', 'combien de temps', 'express', 'urgence'])) {
+    return NextResponse.json(REPONSE_DELAIS)
+  }
+
+  // ── 5. Anomalie / réclamation ─────────────────────────────────────────────
+  if (matches(text, ['anomalie', 'problème', 'probleme', 'réclamation', 'reclamation', 'incident', 'perdu', 'abîmé', 'abime', 'cassé', 'casse', 'manquant', 'plainte', 'erreur', 'signaler', 'retard'])) {
+    return NextResponse.json(REPONSE_ANOMALIE)
+  }
+
+  // ── 6. Créer une demande ──────────────────────────────────────────────────
+  if (matches(text, ['créer', 'creer', 'nouvelle demande', 'envoyer', 'expédier', 'expedier', 'collecte', 'demande', 'commander', 'réserver', 'reserver'])) {
+    return NextResponse.json(REPONSE_CREER)
+  }
+
+  // ── 7. Salutation ─────────────────────────────────────────────────────────
+  if (matches(text, ['bonjour', 'bonsoir', 'salut', 'hello', 'hi', 'salam', 'ahlan', 'aide', 'help', 'allo'])) {
+    return NextResponse.json(REPONSE_BONJOUR)
+  }
+
+  // ── 8. Défaut ─────────────────────────────────────────────────────────────
+  return NextResponse.json(REPONSE_DEFAULT)
 }

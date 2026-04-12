@@ -1,38 +1,40 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
+import Link from 'next/link'
+import type { ChatResponse } from '@/app/api/chatbot/route'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  action?: ChatResponse['action']
 }
 
 // ─── Suggestions rapides ──────────────────────────────────────────────────────
 
-const SUGGESTIONS = [
-  { label: 'Suivre mon colis', text: 'Comment puis-je suivre mon colis ?' },
-  { label: 'Tarifs', text: 'Quels sont les tarifs AMANA ?' },
-  { label: 'Créer une demande', text: 'Comment créer une demande de collecte ?' },
+const SUGGESTIONS: { label: string; text: string }[] = [
+  { label: 'Suivre mon colis', text: 'Comment suivre mon colis ?' },
+  { label: 'Tarifs',           text: 'Quels sont les tarifs ?' },
+  { label: 'Délais',           text: 'Quels sont les délais de livraison ?' },
+  { label: 'Créer une demande', text: 'Je veux créer une demande de collecte.' },
 ]
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export default function ChatBot() {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen]       = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
+  const [input, setInput]     = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef  = useRef<HTMLInputElement>(null)
 
-  // Scroll vers le bas à chaque nouveau message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Focus input à l'ouverture
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100)
   }, [open])
@@ -41,81 +43,34 @@ export default function ChatBot() {
     const trimmed = text.trim()
     if (!trimmed || loading) return
 
-    const userMsg: Message = { role: 'user', content: trimmed }
-    const updatedMessages = [...messages, userMsg]
-    setMessages([...updatedMessages, { role: 'assistant', content: '' }])
+    setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
     setInput('')
     setLoading(true)
 
-    // Détection automatique de référence dans le message
-    const refMatch = trimmed.match(/AMD-\d{8}-\d{4}/i)
-    const demandeRef = refMatch ? refMatch[0].toUpperCase() : undefined
-
     try {
-      const response = await fetch('/api/chatbot', {
+      const res = await fetch('/api/chatbot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: updatedMessages.map((m) => ({ role: m.role, content: m.content })),
-          demandeRef,
-        }),
+        body: JSON.stringify({ message: trimmed }),
       })
 
-      if (!response.ok || !response.body) {
-        throw new Error('Erreur réseau')
-      }
+      const data: ChatResponse = res.ok
+        ? await res.json()
+        : { text: 'Une erreur est survenue. Veuillez réessayer.' }
 
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let accumulatedText = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() ?? ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const raw = line.slice(6).trim()
-          if (!raw || raw === '[DONE]') continue
-          try {
-            const parsed = JSON.parse(raw)
-            if (
-              parsed.type === 'content_block_delta' &&
-              parsed.delta?.type === 'text_delta'
-            ) {
-              accumulatedText += parsed.delta.text
-              setMessages((prev) => {
-                const updated = [...prev]
-                updated[updated.length - 1] = {
-                  role: 'assistant',
-                  content: accumulatedText,
-                }
-                return updated
-              })
-            }
-          } catch {
-            // Ligne SSE non-JSON (event:, ping, etc.) — ignorée
-          }
-        }
-      }
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.text, action: data.action },
+      ])
     } catch {
-      setMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1] = {
-          role: 'assistant',
-          content: 'Désolé, une erreur est survenue. Veuillez réessayer.',
-        }
-        return updated
-      })
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Impossible de contacter l\'assistant. Vérifiez votre connexion.' },
+      ])
     } finally {
       setLoading(false)
     }
-  }, [messages, loading])
+  }, [loading])
 
   return (
     <>
@@ -133,7 +88,7 @@ export default function ChatBot() {
         </button>
       )}
 
-      {/* ── Panel chatbot ────────────────────────────────────────────────── */}
+      {/* ── Panel ───────────────────────────────────────────────────────── */}
       {open && (
         <div
           className="fixed z-50 bg-white shadow-2xl border border-gray-200 flex flex-col overflow-hidden
@@ -151,7 +106,7 @@ export default function ChatBot() {
               </div>
               <div>
                 <p className="text-white text-sm font-semibold leading-tight">Assistant AMANA</p>
-                <p className="text-white/70 text-xs">Toujours disponible</p>
+                <p className="text-white/70 text-xs">Réponse instantanée</p>
               </div>
             </div>
             <button
@@ -167,56 +122,74 @@ export default function ChatBot() {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-            {messages.length === 0 ? (
+
+            {/* État vide — suggestions */}
+            {messages.length === 0 && (
               <div className="flex flex-col items-center text-center mt-6 px-2">
-                <p className="text-gray-600 text-sm font-medium mb-1">Bonjour, comment puis-je vous aider ?</p>
+                <p className="text-gray-600 text-sm font-medium mb-1">
+                  Bonjour ! Comment puis-je vous aider ?
+                </p>
                 <p className="text-gray-400 text-xs mb-5">
-                  Posez-moi vos questions sur vos colis, les tarifs ou les délais.
+                  Colis, tarifs, délais — posez votre question.
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center">
                   {SUGGESTIONS.map((s) => (
                     <button
                       key={s.label}
                       onClick={() => sendMessage(s.text)}
-                      className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-full hover:border-[#E30613]/40 hover:bg-[#E30613]/5 hover:text-[#E30613] transition-colors"
+                      className="px-3 py-1.5 text-xs bg-gray-50 border border-gray-200 text-gray-600 rounded-full
+                                 hover:border-[#E30613]/40 hover:bg-[#E30613]/5 hover:text-[#E30613] transition-colors"
                     >
                       {s.label}
                     </button>
                   ))}
                 </div>
               </div>
-            ) : (
-              messages.map((msg, i) => {
-                const isLastAssistant =
-                  msg.role === 'assistant' && i === messages.length - 1
-                const showTyping = isLastAssistant && loading && !msg.content
-
-                return (
-                  <div
-                    key={i}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
-                        msg.role === 'user'
-                          ? 'bg-[#E30613] text-white rounded-br-sm'
-                          : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                      }`}
-                    >
-                      {showTyping ? (
-                        <span className="flex gap-1 items-center py-0.5">
-                          <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                          <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                          <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
-                        </span>
-                      ) : (
-                        msg.content
-                      )}
-                    </div>
-                  </div>
-                )
-              })
             )}
+
+            {/* Bulles de messages */}
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                <div
+                  className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
+                    msg.role === 'user'
+                      ? 'bg-[#E30613] text-white rounded-br-sm'
+                      : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+                  }`}
+                >
+                  {msg.content}
+                </div>
+
+                {/* Bouton action sous la bulle assistant */}
+                {msg.role === 'assistant' && msg.action && (
+                  <Link
+                    href={msg.action.href}
+                    className="mt-1.5 inline-flex items-center gap-1 text-xs text-[#E30613] font-medium
+                               border border-[#E30613]/30 bg-[#E30613]/5 px-3 py-1.5 rounded-full
+                               hover:bg-[#E30613]/10 transition-colors"
+                  >
+                    {msg.action.label}
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                    </svg>
+                  </Link>
+                )}
+              </div>
+            ))}
+
+            {/* Indicateur de chargement */}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
+                  <span className="flex gap-1 items-center">
+                    <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
+                    <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
+                    <span className="h-1.5 w-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div ref={bottomRef} />
           </div>
 
@@ -234,14 +207,17 @@ export default function ChatBot() {
                 }
               }}
               placeholder="Votre message..."
-              className="flex-1 text-sm border border-gray-200 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#E30613]/20 focus:border-[#E30613] disabled:bg-gray-50"
+              className="flex-1 text-sm border border-gray-200 rounded-xl px-3.5 py-2.5
+                         focus:outline-none focus:ring-2 focus:ring-[#E30613]/20 focus:border-[#E30613]
+                         disabled:bg-gray-50"
               disabled={loading}
-              maxLength={1000}
+              maxLength={500}
             />
             <button
               onClick={() => sendMessage(input)}
               disabled={loading || !input.trim()}
-              className="h-10 w-10 rounded-xl bg-[#E30613] text-white flex items-center justify-center disabled:opacity-40 hover:bg-[#c00510] transition-colors shrink-0"
+              className="h-10 w-10 rounded-xl bg-[#E30613] text-white flex items-center justify-center
+                         disabled:opacity-40 hover:bg-[#c00510] transition-colors shrink-0"
               aria-label="Envoyer"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
